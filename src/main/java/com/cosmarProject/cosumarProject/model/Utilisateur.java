@@ -2,8 +2,10 @@ package com.cosmarProject.cosumarProject.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.sql.Timestamp;
 
 @Entity
 @Getter
@@ -19,12 +21,18 @@ public class Utilisateur {
     private Long id_utilisateur;
 
     private Boolean estActif;
-    private LocalDateTime dateCreation;
+    @CreationTimestamp
+    @Column(updatable = false)
+    private Timestamp dateCreation;
+    @UpdateTimestamp
+    private Timestamp dateUpdate;
 
+    @Column(unique=true)
+    private String userId;
 
     @ManyToOne
     @JoinColumn(name = "id_service")
-    private Service service;
+    private ServiceEntity service;
 
     @ManyToOne
     @JoinColumn(name = "id_role")
@@ -32,8 +40,14 @@ public class Utilisateur {
 
     private String nom;
     private String prenom;
+    @Column(unique = true)
     private String email;
     private String motDePasse;
     private String telephone;
+    private String verifyOtp;
+    private Boolean isAccountVerified;
+    private long verifyOtpExpiredAt;
+    private String resetOtp;
+    private long resetOtpExpiredAt;
 
 }

@@ -14,7 +14,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 @Table(name="service")
-public class Service {
+public class ServiceEntity {
     @Id
     @GeneratedValue
     private Long id_service;

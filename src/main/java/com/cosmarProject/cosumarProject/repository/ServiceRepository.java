@@ -1,9 +1,9 @@
 package com.cosmarProject.cosumarProject.repository;
 
-import com.cosmarProject.cosumarProject.model.Service;
+import com.cosmarProject.cosumarProject.model.ServiceEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
-public interface ServiceRepository extends JpaRepository<Service, Long> {
-    Optional<com.cosmarProject.cosumarProject.model.Service> findByNom(String nom);
+public interface ServiceRepository extends JpaRepository<ServiceEntity, Long> {
+    Optional<ServiceEntity> findByNom(String nom);
 }
