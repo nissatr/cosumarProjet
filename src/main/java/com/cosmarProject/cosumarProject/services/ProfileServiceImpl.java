@@ -11,19 +11,24 @@ import com.cosmarProject.cosumarProject.repository.ServiceRepository;
 import com.cosmarProject.cosumarProject.repository.UtilisateurRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
 public class ProfileServiceImpl implements ProfileService {
 
+    private final PasswordEncoder passwordEncoder;
     private final UtilisateurRepository utilisateurRepository;
     private final RoleRepository roleRepository;
     private final ServiceRepository serviceRepository;
+    private final EmailService emailService;
 
 
     @Override
@@ -47,6 +52,109 @@ public class ProfileServiceImpl implements ProfileService {
 
 
     }
+
+    @Override
+    public ProfileResponse getProfile(String email) {
+        Utilisateur existingUser = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found" +email));
+        return convertToProfileResponse(existingUser);
+    }
+
+    @Override
+    public void sendReset0tp(String email) {
+        Utilisateur existingEntity = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found" +email));
+
+        //Generate 6 digit otp
+        String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
+
+        //calculate expiry time (current time + 15minutes in milliseconds)
+        long expiryTime =System.currentTimeMillis() +(15 * 60*1000);
+
+        //update the profile /user
+        existingEntity.setResetOtp(otp);
+        existingEntity.setResetOtpExpiredAt(expiryTime);
+
+        //save into the database
+        utilisateurRepository.save(existingEntity);
+
+        try{
+            emailService.sendOtpEmail(existingEntity.getEmail(), otp);
+
+        }catch (Exception ex){
+            throw new RuntimeException("unable to send email");
+
+        }
+    }
+
+    @Override
+    public void resetPassword(String email, String otp, String newPassword) {
+        Utilisateur  existingUser = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found" +email));
+        if(existingUser.getResetOtp() == null || !existingUser.getResetOtp().equals(otp)){
+             throw new RuntimeException("Invalid Otp");
+        }
+        if(existingUser.getResetOtpExpiredAt() < System.currentTimeMillis()){
+            throw new RuntimeException("Otp Expired");
+        }
+        existingUser.setMotDePasse(passwordEncoder.encode(newPassword));
+        existingUser.setResetOtp(null);
+        existingUser.setResetOtpExpiredAt(0L);
+        utilisateurRepository.save(existingUser);
+    }
+
+    @Override
+    public void sendOtp(String email) {
+        Utilisateur existingUser =utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found" +email));
+        if(existingUser.getIsAccountVerified() != null && existingUser.getIsAccountVerified()){
+            return;
+        }
+        //Generate 6 digit otp
+        String otp = String.valueOf(ThreadLocalRandom.current().nextInt(100000, 1000000));
+
+        //calculate expiry time (current time + 24 hours in milliseconds)
+        long expiryTime =System.currentTimeMillis() +(24 *60 * 60*1000);
+
+        //update the user entity
+        existingUser.setVerifyOtp(otp);
+        existingUser.setVerifyOtpExpiredAt(expiryTime);
+
+        //save to database
+        utilisateurRepository.save(existingUser);
+        // ✅ Envoi du mail
+        try {
+            emailService.sendOtpEmail(existingUser.getEmail(), otp);
+        } catch (Exception ex) {
+            throw new RuntimeException("Unable to send email: " + ex.getMessage(), ex);
+        }
+
+    }
+
+    @Override
+    public void verifyOtp(String email, String otp) {
+        Utilisateur existingUser= utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found" +email));
+        if(existingUser.getVerifyOtp() == null || !existingUser.getVerifyOtp().equals(otp)){
+            throw new RuntimeException("Invalid Otp");
+        }
+        if(existingUser.getVerifyOtpExpiredAt() < System.currentTimeMillis()){
+            throw new RuntimeException("Otp Expired");
+        }
+
+        existingUser.setIsAccountVerified(true);
+        existingUser.setVerifyOtp(null);
+        existingUser.setVerifyOtpExpiredAt(0L);
+        utilisateurRepository.save(existingUser);
+    }
+
+    @Override
+    public String getLoggedInUserId(String email) {
+        Utilisateur existingUser = utilisateurRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found" +email));
+        return existingUser.getUserId();
+    }
+
     private ProfileResponse convertToProfileResponse(Utilisateur utilisateur) {
         return ProfileResponse.builder()
                 .nom(utilisateur.getNom())
@@ -74,7 +182,7 @@ public class ProfileServiceImpl implements ProfileService {
                 .userId(UUID.randomUUID().toString())
                 .prenom(request.getPrenom())
                 .nom(request.getName())
-                .motDePasse(request.getPassword())
+                .motDePasse(passwordEncoder.encode(request.getPassword() ))
                 .isAccountVerified(false)
                 .resetOtpExpiredAt(0)
                 .verifyOtp(null)

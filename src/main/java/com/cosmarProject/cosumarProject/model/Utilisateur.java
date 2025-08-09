@@ -42,6 +42,7 @@ public class Utilisateur {
     private String prenom;
     @Column(unique = true)
     private String email;
+    @Column(name = "mot_de_passe")
     private String motDePasse;
     private String telephone;
     private String verifyOtp;
