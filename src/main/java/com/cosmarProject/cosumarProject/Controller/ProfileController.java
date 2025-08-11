@@ -18,22 +18,9 @@ public class ProfileController {
     private final ProfileService profileService;
     private final EmailService emailService;
 
-    @PostMapping("/register")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ProfileResponse register(@Valid  @RequestBody ProfileRequest request) {
-        ProfileResponse response =profileService.createProfile(request);
-        //TOODO: send welcome eimail
-        emailService.sendWelcomeEmail(response.getEmail(), response.getNom());
-        return response;
-
-    }
-
     @GetMapping("/profile")
-    public ProfileResponse getProfile(@CurrentSecurityContext(expression = " authentication?.name")String email) {
-
+    public ProfileResponse getProfile(@CurrentSecurityContext(expression = "authentication?.name") String email) {
         return profileService.getProfile(email);
     }
-
-
 
 }

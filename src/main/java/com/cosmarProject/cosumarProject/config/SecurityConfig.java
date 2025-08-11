@@ -42,7 +42,7 @@ public class SecurityConfig {
         http.cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable) // Pour les APIs REST
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/register", "/api/v1.0/register" , "/login", "/send-reset-otp", "/reset-password", "logout").permitAll() // Autorise l'accès
+                        .requestMatchers("/register", "/api/v1.0/register", "/login", "/api/v1.0/login", "/verify-login-otp", "/api/v1.0/verify-login-otp", "/send-reset-otp", "/reset-password", "/logout", "/test").permitAll() // Autorise l'accès
                         .anyRequest().authenticated() // Tout le reste est protégé
                 )
                 .sessionManagement(session ->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -72,14 +72,15 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowedOrigins(List.of("http://localhost:5173"));
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS","PATCH"));
-        config.setAllowedHeaders(List.of("Authorization", "Cache-Control"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("*"));
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
+        
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
-
-
     }
 
     @Bean

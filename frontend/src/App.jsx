@@ -6,6 +6,9 @@ import Home from "./pages/Home.jsx";
 import Login from "./pages/Login.jsx";
 import EmailVerify from "./pages/EmailVerify.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import NouvelleDemande from "./pages/NouvelleDemande.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 const App = () => {
   return (
@@ -16,8 +19,18 @@ const App = () => {
           <Route path="/login" element={ <Login/>}></Route>
           <Route path="/email-verify" element={ <EmailVerify/>}></Route>
           <Route path="/reset-password" element={ <ResetPassword/>}></Route>
-
-
+          
+          {/* Routes protégées */}
+          <Route path="/dashboard" element={ 
+            <ProtectedRoute>
+              <Dashboard/>
+            </ProtectedRoute>
+          }></Route>
+          <Route path="/nouvelle-demande" element={ 
+            <ProtectedRoute>
+              <NouvelleDemande/>
+            </ProtectedRoute>
+          }></Route>
         </Routes>
       </div>
   )
