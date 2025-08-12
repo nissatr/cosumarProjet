@@ -143,9 +143,53 @@ export const authService = {
     // Logout
     logout: async () => {
         try {
-            await api.post('/logout');
+            const response = await api.post('/logout');
+            // Supprimer le cookie côté client aussi
+            document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            return response.data;
         } catch (error) {
             console.error('Erreur lors de la déconnexion:', error);
+            // Supprimer le cookie même en cas d'erreur
+            document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            throw error;
+        }
+    }
+};
+
+// Service pour l'administration
+export const adminService = {
+    // Récupérer tous les utilisateurs
+    getAllUsers: async () => {
+        try {
+            const response = await api.get('/admin/users');
+            return response.data;
+        } catch (error) {
+            throw new Error(error.response?.data || 'Erreur lors de la récupération des utilisateurs');
+        }
+    },
+
+    // Récupérer tous les rôles
+    getAllRoles: async () => {
+        try {
+            const response = await api.get('/admin/roles');
+            return response.data;
+        } catch (error) {
+            throw new Error(error.response?.data || 'Erreur lors de la récupération des rôles');
+        }
+    },
+
+    // Mettre à jour le rôle d'un utilisateur
+    updateUserRole: async (userId, newRole) => {
+        try {
+            console.log("🚀 Envoi de la requête updateUserRole:", { userId, newRole });
+            const response = await api.put(`/admin/users/${userId}/role`, { role: newRole });
+            console.log("✅ Réponse updateUserRole:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("❌ Erreur updateUserRole:", error);
+            console.error("❌ Response data:", error.response?.data);
+            console.error("❌ Response status:", error.response?.status);
+            throw new Error(error.response?.data?.message || 'Erreur lors de la mise à jour du rôle');
         }
     }
 };

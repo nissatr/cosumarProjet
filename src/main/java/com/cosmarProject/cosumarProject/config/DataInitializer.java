@@ -17,13 +17,16 @@ public class DataInitializer {
 
     @PostConstruct
     public void init() {
-        // Initialisation des rôles
+        // Initialisation des rôles principaux
         createRoleIfNotExists("demandeur");
-        createRoleIfNotExists("manager");
+        createRoleIfNotExists("ADMIN");
+        createRoleIfNotExists("SUPER_ADMIN");
+        
+        // Initialisation des rôles supplémentaires
         createRoleIfNotExists("support_it");
+        createRoleIfNotExists("manager");
         createRoleIfNotExists("administration");
         createRoleIfNotExists("si");
-        createRoleIfNotExists("super_admin");
 
         // Initialisation des services
         createServiceIfNotExists("Informatique");
@@ -38,12 +41,14 @@ public class DataInitializer {
     }
 
     private void createRoleIfNotExists(String roleName) {
-        roleRepository.findByNom(roleName)
-                .orElseGet(() -> roleRepository.save(Role.builder().nom(roleName).build()));
+        if (!roleRepository.findByNom(roleName).isPresent()) {
+            roleRepository.save(Role.builder().nom(roleName).build());
+        }
     }
 
     private void createServiceIfNotExists(String serviceName) {
-        serviceRepository.findByNom(serviceName)
-                .orElseGet(() -> serviceRepository.save(ServiceEntity.builder().nom(serviceName).build()));
+        if (!serviceRepository.findByNom(serviceName).isPresent()) {
+            serviceRepository.save(ServiceEntity.builder().nom(serviceName).build());
+        }
     }
 }

@@ -42,7 +42,7 @@ public class SecurityConfig {
         http.cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable) // Pour les APIs REST
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/register", "/api/v1.0/register", "/login", "/api/v1.0/login", "/verify-login-otp", "/api/v1.0/verify-login-otp", "/send-reset-otp", "/reset-password", "/logout", "/test").permitAll() // Autorise l'accès
+                        .requestMatchers("/register", "/api/v1.0/register", "/login", "/api/v1.0/login", "/verify-login-otp", "/api/v1.0/verify-login-otp", "/send-reset-otp", "/reset-password", "/logout", "/api/v1.0/logout", "/init-super-admin", "/api/v1.0/init-super-admin", "/init-roles", "/api/v1.0/init-roles", "/test").permitAll() // Autorise l'accès
                         .anyRequest().authenticated() // Tout le reste est protégé
                 )
                 .sessionManagement(session ->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

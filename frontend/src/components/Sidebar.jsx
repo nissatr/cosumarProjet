@@ -8,12 +8,14 @@ const Sidebar = () => {
     const navigate = useNavigate();
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
     useEffect(() => {
         const fetchUserInfo = async () => {
             try {
                 const info = await authService.getUserInfo();
                 setUserInfo(info);
+                setIsSuperAdmin(info.role === 'SUPER_ADMIN');
             } catch (error) {
                 console.error("Erreur lors de la récupération des informations utilisateur:", error);
                 toast.error("Erreur lors du chargement des informations utilisateur");
@@ -58,13 +60,19 @@ const Sidebar = () => {
 
     const handleLogout = async () => {
         try {
-            await authService.logout();
-            toast.success("Déconnexion réussie");
-            navigate("/login");
+            const response = await authService.logout();
+            if (response && response.success) {
+                toast.success("Déconnexion réussie");
+            } else {
+                toast.info("Déconnexion effectuée");
+            }
+            // Forcer la redirection vers login
+            window.location.href = "/login";
         } catch (error) {
             console.error("Erreur lors de la déconnexion:", error);
-            // Rediriger quand même vers la page de login
-            navigate("/login");
+            toast.info("Déconnexion effectuée");
+            // Forcer la redirection même en cas d'erreur
+            window.location.href = "/login";
         }
     };
 
@@ -158,6 +166,28 @@ const Sidebar = () => {
                         </div>
                     ))}
                 </div>
+
+                {/* Administration - Visible seulement pour Super Admin */}
+                {isSuperAdmin && (
+                    <div className="mb-4">
+                        <h6 className="text-uppercase fw-bold text-muted mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+                            ADMINISTRATION
+                        </h6>
+                        <div
+                            className="d-flex align-items-center p-3 rounded-3 mb-2 cursor-pointer text-danger hover-bg-light"
+                            style={{
+                                transition: "all 0.2s ease",
+                                cursor: "pointer"
+                            }}
+                            onClick={() => navigate("/admin")}
+                        >
+                            <div className="me-3" style={{ fontSize: "1.2rem" }}>
+                                👑
+                            </div>
+                            <span className="fw-medium">Panel d'Administration</span>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* User Profile */}

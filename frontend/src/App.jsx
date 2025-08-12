@@ -8,6 +8,7 @@ import EmailVerify from "./pages/EmailVerify.jsx";
 import ResetPassword from "./pages/ResetPassword.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import NouvelleDemande from "./pages/NouvelleDemande.jsx";
+import AdminPanel from "./pages/AdminPanel.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 const App = () => {
@@ -29,6 +30,11 @@ const App = () => {
           <Route path="/nouvelle-demande" element={ 
             <ProtectedRoute>
               <NouvelleDemande/>
+            </ProtectedRoute>
+          }></Route>
+          <Route path="/admin" element={ 
+            <ProtectedRoute>
+              <AdminPanel/>
             </ProtectedRoute>
           }></Route>
         </Routes>
