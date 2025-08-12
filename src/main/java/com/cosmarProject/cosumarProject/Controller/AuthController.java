@@ -473,4 +473,107 @@ public class AuthController {
             return ResponseEntity.badRequest().body(error);
         }
     }
+
+    @PostMapping("/admin/users")
+    public ResponseEntity<?> createUser(@RequestBody Map<String, Object> request) {
+        try {
+            System.out.println("🔄 Tentative de création d'utilisateur par Super Admin");
+            
+            // Extraire les données de la requête
+            String email = (String) request.get("email");
+            String password = (String) request.get("password");
+            String nom = (String) request.get("nom");
+            String prenom = (String) request.get("prenom");
+            String telephone = (String) request.get("telephone");
+            String roleName = (String) request.get("role");
+            String serviceName = (String) request.get("service");
+            
+            System.out.println("📝 Données reçues: " + request);
+            
+            // Créer l'utilisateur
+            Utilisateur newUser = utilisateurService.createUserByAdmin(email, password, nom, prenom, telephone, roleName, serviceName);
+            
+            // Envoyer un email de bienvenue
+            try {
+                String fullName = prenom + " " + nom;
+                emailService.sendWelcomeEmail(email, fullName);
+            } catch (Exception e) {
+                System.out.println("⚠️ Erreur lors de l'envoi de l'email de bienvenue: " + e.getMessage());
+            }
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Utilisateur créé avec succès");
+            response.put("userId", newUser.getId_utilisateur());
+            
+            System.out.println("✅ Utilisateur créé avec succès: " + newUser.getId_utilisateur());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la création de l'utilisateur: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @PutMapping("/admin/users/{userId}")
+    public ResponseEntity<?> updateUser(@PathVariable Long userId, @RequestBody Map<String, Object> request) {
+        try {
+            System.out.println("🔄 Tentative de mise à jour de l'utilisateur ID: " + userId);
+            
+            // Extraire les données de la requête
+            String email = (String) request.get("email");
+            String nom = (String) request.get("nom");
+            String prenom = (String) request.get("prenom");
+            String telephone = (String) request.get("telephone");
+            String roleName = (String) request.get("role");
+            String serviceName = (String) request.get("service");
+            
+            System.out.println("📝 Données reçues: " + request);
+            
+            // Mettre à jour l'utilisateur
+            Utilisateur updatedUser = utilisateurService.updateUserByAdmin(userId, email, nom, prenom, telephone, roleName, serviceName);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Utilisateur mis à jour avec succès");
+            response.put("userId", updatedUser.getId_utilisateur());
+            
+            System.out.println("✅ Utilisateur mis à jour avec succès: " + updatedUser.getId_utilisateur());
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la mise à jour de l'utilisateur: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @DeleteMapping("/admin/users/{userId}")
+    public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        try {
+            System.out.println("🔄 Tentative de suppression de l'utilisateur ID: " + userId);
+            
+            // Supprimer l'utilisateur
+            utilisateurService.deleteUserByAdmin(userId);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Utilisateur supprimé avec succès");
+            
+            System.out.println("✅ Utilisateur supprimé avec succès: " + userId);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la suppression de l'utilisateur: " + e.getMessage());
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", e.getMessage());
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
 }

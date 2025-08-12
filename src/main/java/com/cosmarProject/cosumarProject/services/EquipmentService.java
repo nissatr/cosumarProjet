@@ -30,11 +30,33 @@ public class EquipmentService {
         Utilisateur demandeur = utilisateurRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
         
+        // Créer ou récupérer le TypeDemande
+        final TypeDemande.DetailType detailType;
+        if ("nouveau".equalsIgnoreCase(request.getRequestType())) {
+            detailType = TypeDemande.DetailType.NOUVEAU;
+        } else if ("changement".equalsIgnoreCase(request.getRequestType())) {
+            detailType = TypeDemande.DetailType.CHANGEMENT;
+        } else {
+            detailType = null;
+        }
+        
+        // Chercher un type existant ou en créer un nouveau
+        TypeDemande typeDemande = typeDemandeRepository.findByNomTypeAndDetailType(request.getEquipmentType(), detailType)
+                .orElseGet(() -> {
+                    TypeDemande newType = TypeDemande.builder()
+                            .nomType(request.getEquipmentType())
+                            .detailType(detailType)
+                            .aDetailType(true)
+                            .build();
+                    return typeDemandeRepository.save(newType);
+                });
+        
         // Créer la demande
         Demande demande = Demande.builder()
                 .dateCreation(LocalDateTime.now())
                 .description(request.getDescription())
                 .demandeur(demandeur)
+                .typeDemande(typeDemande)
                 .commentaireAutres(request.getEquipmentType() + (request.getRequestType() != null && !request.getRequestType().isEmpty() ? " - " + request.getRequestType() : ""))
                 .build();
         

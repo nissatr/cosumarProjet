@@ -28,19 +28,21 @@ const Sidebar = () => {
     }, []);
 
     const navigationItems = [
-        {
-            id: "dashboard",
-            title: "Dashboard",
-            icon: "📊",
-            description: "Vue d'ensemble et statistiques",
-            active: true
-        },
-        {
-            id: "mes-demandes",
-            title: "Mes Demandes",
-            icon: "📄",
-            description: "Consulter et gérer mes demandes"
-        },
+        ...(isSuperAdmin ? [] : [
+            {
+                id: "dashboard",
+                title: "Dashboard",
+                icon: "📊",
+                description: "Vue d'ensemble et statistiques",
+                active: true
+            },
+            {
+                id: "mes-demandes",
+                title: "Mes Demandes",
+                icon: "📄",
+                description: "Consulter et gérer mes demandes"
+            }
+        ]),
         {
             id: "notifications",
             title: "Notifications",
@@ -87,26 +89,28 @@ const Sidebar = () => {
                 <div className="fs-7 opacity-75">Système de demandes</div>
             </div>
 
-            {/* Section Créer une nouvelle demande */}
-            <div className="p-3 border-bottom">
-                <div
-                    className="d-flex align-items-center p-3 rounded-3 cursor-pointer text-primary hover-bg-light"
-                    style={{
-                        transition: "all 0.2s ease",
-                        cursor: "pointer",
-                        backgroundColor: "#EBF3FF",
-                        border: "1px solid #4A90E2"
-                    }}
-                    onClick={() => navigate("/nouvelle-demande")}
-                >
-                    <div className="me-3" style={{ fontSize: "1.2rem" }}>
-                        ➕
-                    </div>
-                    <div>
-                        <div className="fw-medium">Créer une nouvelle demande</div>
+            {/* Section Créer une nouvelle demande - Visible seulement pour les utilisateurs normaux */}
+            {!isSuperAdmin && (
+                <div className="p-3 border-bottom">
+                    <div
+                        className="d-flex align-items-center p-3 rounded-3 cursor-pointer text-primary hover-bg-light"
+                        style={{
+                            transition: "all 0.2s ease",
+                            cursor: "pointer",
+                            backgroundColor: "#EBF3FF",
+                            border: "1px solid #4A90E2"
+                        }}
+                        onClick={() => navigate("/nouvelle-demande")}
+                    >
+                        <div className="me-3" style={{ fontSize: "1.2rem" }}>
+                            ➕
+                        </div>
+                        <div>
+                            <div className="fw-medium">Créer une nouvelle demande</div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* Navigation */}
             <div className="flex-grow-1 p-3" style={{ overflowY: "auto" }}>

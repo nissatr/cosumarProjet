@@ -156,4 +156,132 @@ public class UtilisateurService {
 
         return utilisateurRepository.save(superAdmin);
     }
+
+    /**
+     * Créer un utilisateur par le Super Admin
+     */
+    public Utilisateur createUserByAdmin(String email, String password, String nom, String prenom, 
+                                       String telephone, String roleName, String serviceName) {
+        try {
+            System.out.println("🔄 Création d'utilisateur par Super Admin: " + email);
+            
+            // Vérifier si l'email existe déjà
+            if (utilisateurRepository.findByEmail(email).isPresent()) {
+                throw new RuntimeException("Un utilisateur avec cet email existe déjà");
+            }
+
+            // Récupérer le rôle spécifié
+            Role role = roleRepository.findByNom(roleName)
+                    .orElseThrow(() -> new RuntimeException("Rôle non trouvé: " + roleName));
+
+            // Récupérer ou créer le service
+            ServiceEntity service = serviceRepository.findByNom(serviceName)
+                    .orElseGet(() -> {
+                        ServiceEntity newService = ServiceEntity.builder()
+                                .nom(serviceName)
+                                .build();
+                        return serviceRepository.save(newService);
+                    });
+
+            // Créer l'utilisateur
+            Utilisateur utilisateur = Utilisateur.builder()
+                    .nom(nom)
+                    .prenom(prenom)
+                    .email(email)
+                    .motDePasse(passwordEncoder.encode(password))
+                    .telephone(telephone)
+                    .service(service)
+                    .role(role)
+                    .estActif(true)
+                    .isAccountVerified(true) // Les utilisateurs créés par l'admin sont automatiquement vérifiés
+                    .userId(UUID.randomUUID().toString())
+                    .build();
+
+            Utilisateur savedUser = utilisateurRepository.save(utilisateur);
+            System.out.println("✅ Utilisateur créé avec succès: " + savedUser.getId_utilisateur());
+            return savedUser;
+            
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la création de l'utilisateur: " + e.getMessage());
+            throw new RuntimeException("Erreur lors de la création de l'utilisateur: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Mettre à jour un utilisateur par le Super Admin
+     */
+    public Utilisateur updateUserByAdmin(Long userId, String email, String nom, String prenom, 
+                                       String telephone, String roleName, String serviceName) {
+        try {
+            System.out.println("🔄 Mise à jour d'utilisateur par Super Admin: " + userId);
+            
+            // Récupérer l'utilisateur existant
+            Utilisateur utilisateur = utilisateurRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé avec l'ID: " + userId));
+
+            // Vérifier si l'email existe déjà pour un autre utilisateur
+            if (!email.equals(utilisateur.getEmail())) {
+                utilisateurRepository.findByEmail(email).ifPresent(existingUser -> {
+                    if (!existingUser.getId_utilisateur().equals(userId)) {
+                        throw new RuntimeException("Un utilisateur avec cet email existe déjà");
+                    }
+                });
+            }
+
+            // Récupérer le rôle spécifié
+            Role role = roleRepository.findByNom(roleName)
+                    .orElseThrow(() -> new RuntimeException("Rôle non trouvé: " + roleName));
+
+            // Récupérer ou créer le service
+            ServiceEntity service = serviceRepository.findByNom(serviceName)
+                    .orElseGet(() -> {
+                        ServiceEntity newService = ServiceEntity.builder()
+                                .nom(serviceName)
+                                .build();
+                        return serviceRepository.save(newService);
+                    });
+
+            // Mettre à jour les informations
+            utilisateur.setNom(nom);
+            utilisateur.setPrenom(prenom);
+            utilisateur.setEmail(email);
+            utilisateur.setTelephone(telephone);
+            utilisateur.setRole(role);
+            utilisateur.setService(service);
+
+            Utilisateur savedUser = utilisateurRepository.save(utilisateur);
+            System.out.println("✅ Utilisateur mis à jour avec succès: " + savedUser.getId_utilisateur());
+            return savedUser;
+            
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la mise à jour de l'utilisateur: " + e.getMessage());
+            throw new RuntimeException("Erreur lors de la mise à jour de l'utilisateur: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Supprimer un utilisateur par le Super Admin
+     */
+    public void deleteUserByAdmin(Long userId) {
+        try {
+            System.out.println("🔄 Suppression d'utilisateur par Super Admin: " + userId);
+            
+            // Récupérer l'utilisateur existant
+            Utilisateur utilisateur = utilisateurRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé avec l'ID: " + userId));
+
+            // Empêcher la suppression du Super Admin
+            if ("SUPER_ADMIN".equals(utilisateur.getRole().getNom())) {
+                throw new RuntimeException("Impossible de supprimer un Super Admin");
+            }
+
+            // Supprimer l'utilisateur
+            utilisateurRepository.delete(utilisateur);
+            System.out.println("✅ Utilisateur supprimé avec succès: " + userId);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la suppression de l'utilisateur: " + e.getMessage());
+            throw new RuntimeException("Erreur lors de la suppression de l'utilisateur: " + e.getMessage());
+        }
+    }
 }

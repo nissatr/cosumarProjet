@@ -191,6 +191,66 @@ export const adminService = {
             console.error("❌ Response status:", error.response?.status);
             throw new Error(error.response?.data?.message || 'Erreur lors de la mise à jour du rôle');
         }
+    },
+
+    // Créer un nouvel utilisateur
+    createUser: async (userData) => {
+        try {
+            console.log("🚀 Envoi de la requête createUser:", userData);
+            const response = await api.post('/admin/users', userData);
+            console.log("✅ Réponse createUser:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("❌ Erreur createUser:", error);
+            console.error("❌ Response data:", error.response?.data);
+            console.error("❌ Response status:", error.response?.status);
+            throw new Error(error.response?.data?.message || 'Erreur lors de la création de l\'utilisateur');
+        }
+    },
+
+    // Mettre à jour un utilisateur
+    updateUser: async (userId, userData) => {
+        try {
+            console.log("🚀 Envoi de la requête updateUser:", { userId, userData });
+            const response = await api.put(`/admin/users/${userId}`, userData);
+            console.log("✅ Réponse updateUser:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("❌ Erreur updateUser:", error);
+            console.error("❌ Response data:", error.response?.data);
+            console.error("❌ Response status:", error.response?.status);
+            throw new Error(error.response?.data?.message || 'Erreur lors de la mise à jour de l\'utilisateur');
+        }
+    },
+
+    // Supprimer un utilisateur
+    deleteUser: async (userId) => {
+        try {
+            console.log("🚀 Envoi de la requête deleteUser:", userId);
+            const response = await api.delete(`/admin/users/${userId}`);
+            console.log("✅ Réponse deleteUser:", response.data);
+            return response.data;
+        } catch (error) {
+            console.error("❌ Erreur deleteUser:", error);
+            console.error("❌ Response data:", error.response?.data);
+            console.error("❌ Response status:", error.response?.status);
+            throw new Error(error.response?.data?.message || 'Erreur lors de la suppression de l\'utilisateur');
+        }
+    },
+
+    // Récupérer toutes les demandes
+    getAllDemandes: async () => {
+        try {
+            console.log("🚀 Envoi de la requête getAllDemandes");
+            const response = await api.get('/admin/demandes');
+            console.log("✅ Réponse getAllDemandes:", response.data);
+            return response.data.demandes;
+        } catch (error) {
+            console.error("❌ Erreur getAllDemandes:", error);
+            console.error("❌ Response data:", error.response?.data);
+            console.error("❌ Response status:", error.response?.status);
+            throw new Error(error.response?.data?.message || 'Erreur lors de la récupération des demandes');
+        }
     }
 };
 

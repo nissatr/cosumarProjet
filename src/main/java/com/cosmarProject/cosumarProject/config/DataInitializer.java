@@ -17,16 +17,14 @@ public class DataInitializer {
 
     @PostConstruct
     public void init() {
-        // Initialisation des rôles principaux
+        // Initialisation des rôles selon l'interface
         createRoleIfNotExists("demandeur");
-        createRoleIfNotExists("ADMIN");
+        createRoleIfNotExists("Manager N+1");
+        createRoleIfNotExists("SI");
+        createRoleIfNotExists("Direction Générale");
+        createRoleIfNotExists("Support IT");
+        createRoleIfNotExists("Administrateur");
         createRoleIfNotExists("SUPER_ADMIN");
-        
-        // Initialisation des rôles supplémentaires
-        createRoleIfNotExists("support_it");
-        createRoleIfNotExists("manager");
-        createRoleIfNotExists("administration");
-        createRoleIfNotExists("si");
 
         // Initialisation des services
         createServiceIfNotExists("Informatique");
