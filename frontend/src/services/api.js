@@ -133,8 +133,10 @@ export const adminService = {
 ================================ */
 export const demandeService = {
     getMyDemandes: async () => {
-        const response = await api.get("/mes-demandes");
-        return response.data;
+        const response = await api.get("/mes-demandes", {
+            params: { _t: Date.now() } // Cache-busting
+        });
+        return response.data.demandes || [];
     },
     annulerDemande: async (id) => {
         const response = await api.post(`/demandes/${id}/annuler`);

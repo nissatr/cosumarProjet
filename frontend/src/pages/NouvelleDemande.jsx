@@ -52,9 +52,16 @@ const NouvelleDemande = () => {
         setIsSubmitting(true);
 
         try {
+            // Mapping des IDs vers les labels pour le backend
+            const selectedEquipment = equipmentTypes.find(type => type.id === equipmentType);
+            const equipmentTypeForBackend = equipmentType === "autre" ? otherEquipmentType : selectedEquipment.label;
+            
+            // Pour les types sans options, ne pas envoyer de requestType
+            const finalRequestType = selectedEquipment.hasOptions ? requestType : null;
+            
             const requestData = {
-                equipmentType: equipmentType === "autre" ? otherEquipmentType : equipmentType,
-                requestType,
+                equipmentType: equipmentTypeForBackend,
+                requestType: finalRequestType,
                 description,
                 urgencyLevel,   // le backend pourra convertir en enum
                 signature

@@ -1,11 +1,12 @@
 import { assets } from "../assets/assets.js";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { authService } from "../services/api.js";
 import { toast } from "react-toastify";
 import { useState, useEffect } from "react";
 
 const Sidebar = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -34,13 +35,14 @@ const Sidebar = () => {
                 title: "Dashboard",
                 icon: "📊",
                 description: "Vue d'ensemble et statistiques",
-                active: true
+                active: location.pathname === "/dashboard"
             },
             {
                 id: "mes-demandes",
                 title: "Mes Demandes",
                 icon: "📄",
-                description: "Consulter et gérer mes demandes"
+                description: "Consulter et gérer mes demandes",
+                active: location.pathname === "/mes-demandes"
             }
         ]),
         {
@@ -48,17 +50,12 @@ const Sidebar = () => {
             title: "Notifications",
             icon: "🔔",
             description: "Alertes et changements de statut",
-            badge: 3
+            badge: 3,
+            active: location.pathname === "/notifications"
         }
     ];
 
-    const toolsItems = [
-        {
-            id: "parametres",
-            title: "Paramètres",
-            icon: "⚙️"
-        }
-    ];
+
 
     const handleLogout = async () => {
         try {
@@ -148,28 +145,7 @@ const Sidebar = () => {
                     ))}
                 </div>
 
-                {/* Tools */}
-                <div className="mb-4">
-                    <h6 className="text-uppercase fw-bold text-muted mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
-                        OUTILS
-                    </h6>
-                    {toolsItems.map((item) => (
-                        <div
-                            key={item.id}
-                            className="d-flex align-items-center p-3 rounded-3 mb-2 cursor-pointer text-muted hover-bg-light"
-                            style={{
-                                transition: "all 0.2s ease",
-                                cursor: "pointer"
-                            }}
-                            onClick={() => navigate(`/${item.id}`)}
-                        >
-                            <div className="me-3" style={{ fontSize: "1.2rem" }}>
-                                {item.icon}
-                            </div>
-                            <span className="fw-medium">{item.title}</span>
-                        </div>
-                    ))}
-                </div>
+
 
                 {/* Administration - Visible seulement pour Super Admin */}
                 {isSuperAdmin && (
@@ -178,7 +154,9 @@ const Sidebar = () => {
                             ADMINISTRATION
                         </h6>
                         <div
-                            className="d-flex align-items-center p-3 rounded-3 mb-2 cursor-pointer text-danger hover-bg-light"
+                            className={`d-flex align-items-center p-3 rounded-3 mb-2 cursor-pointer ${
+                                location.pathname === "/admin" ? 'bg-primary text-white' : 'text-danger hover-bg-light'
+                            }`}
                             style={{
                                 transition: "all 0.2s ease",
                                 cursor: "pointer"

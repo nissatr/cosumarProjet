@@ -5,33 +5,67 @@ import Sidebar from "../components/Sidebar.jsx";
 
 const MesDemandes = () => {
     const [demandes, setDemandes] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [statutFilter, setStatutFilter] = useState("");
     const [typeFilter, setTypeFilter] = useState("");
+    const [urgenceFilter, setUrgenceFilter] = useState("");
+
 
     useEffect(() => {
         fetchDemandes();
     }, []);
 
+
     const fetchDemandes = async () => {
+        setLoading(true);
         try {
             const data = await demandeService.getMyDemandes();
-            setDemandes(data);
+            console.log("Données reçues:", data); // Debug
+            console.log("Type de data:", typeof data);
+            console.log("Est-ce un tableau?", Array.isArray(data));
+            if (data && Array.isArray(data) && data.length > 0) {
+                console.log("Première demande:", data[0]);
+                console.log("TypeDemande de la première demande:", data[0].typeDemande);
+            }
+            // S'assurer que data est un tableau
+            if (data && Array.isArray(data)) {
+                setDemandes(data);
+            } else if (data && data.demandes && Array.isArray(data.demandes)) {
+                setDemandes(data.demandes);
+            } else {
+                setDemandes([]);
+            }
         } catch (err) {
+            console.error("Erreur fetchDemandes:", err); // Debug
             toast.error("Erreur de chargement des demandes");
+            setDemandes([]);
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleAnnuler = async (id) => {
         if (!window.confirm("Voulez-vous annuler cette demande ?")) return;
-        await demandeService.annulerDemande(id);
-        fetchDemandes();
+        try {
+            await demandeService.annulerDemande(id);
+            toast.success("Demande annulée avec succès !");
+            fetchDemandes(); // Rafraîchit la liste
+        } catch {
+            toast.error("Impossible d'annuler la demande.");
+        }
     };
 
     const handleSupprimer = async (id) => {
         if (!window.confirm("Voulez-vous supprimer cette demande ?")) return;
-        await demandeService.supprimerDemande(id);
-        fetchDemandes();
+        try {
+            await demandeService.supprimerDemande(id);
+            toast.success("Demande supprimée avec succès !");
+            fetchDemandes(); // Rafraîchit la liste
+        } catch {
+            toast.error("Impossible de supprimer la demande.");
+        }
     };
+
 
     return (
         <div className="d-flex" style={{ height: "100vh", backgroundColor: "#f8f9fa" }}>
@@ -50,47 +84,79 @@ const MesDemandes = () => {
 
                     {/* FILTRES */}
                     <div className="bg-white rounded-3 shadow-sm p-3 mb-4 d-flex gap-3 flex-wrap">
-                        <select className="form-select w-auto" value={statutFilter} onChange={e => setStatutFilter(e.target.value)}>
+                        <select className="form-select w-auto" value={statutFilter}
+                                onChange={e => setStatutFilter(e.target.value)}>
                             <option value="">Tous les statuts</option>
                             <option value="EN_COURS">En cours</option>
                             <option value="ACCEPTEE">Acceptée</option>
                             <option value="REFUSEE">Refusée</option>
                             <option value="ANNULEE">Annulée</option>
                         </select>
+                        <select className="form-select w-auto" value={urgenceFilter}
+                                onChange={e => setUrgenceFilter(e.target.value)}>
+                            <option value="">Toutes les urgences</option>
+                            <option value="FAIBLE">Faible</option>
+                            <option value="MOYENNE">Moyenne</option>
+                            <option value="ELEVEE">Élevée</option>
+                        </select>
 
-                        <select className="form-select w-auto" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+
+                        <select className="form-select w-auto" value={typeFilter}
+                                onChange={e => setTypeFilter(e.target.value)}>
                             <option value="">Tous les types</option>
-                            <option value="ORDINATEUR">Ordinateur</option>
-                            <option value="IMPRIMANTE">Imprimante</option>
-                            <option value="PRISE_RESEAU">Prise réseau</option>
-                            <option value="LOGICIELS">Logiciels</option>
-                            <option value="AUTRE">Autre</option>
+                            <option value="Poste micro-ordinateur">Poste micro-ordinateur</option>
+                            <option value="Imprimante">Imprimante</option>
+                            <option value="Prise réseau">Prise réseau</option>
+                            <option value="Logiciels">Logiciels</option>
+                            <option value="Autres">Autres</option>
                         </select>
                     </div>
 
                     {/* LISTE DES DEMANDES */}
                     <div className="row row-cols-1 row-cols-md-2 g-3">
-                        {demandes
-                            .filter(d => !statutFilter || d.statut === statutFilter)
-                            .filter(d => !typeFilter || d.typeDemande.nom === typeFilter)
-                            .map(d => (
+                        {loading ? (
+                            <div className="col-12">
+                                <div className="bg-white rounded-3 shadow-sm p-5 text-center">
+                                    <div className="spinner-border text-primary" role="status">
+                                        <span className="visually-hidden">Chargement...</span>
+                                    </div>
+                                    <p className="mt-3 text-muted">Chargement des demandes...</p>
+                                </div>
+                            </div>
+                        ) : demandes && Array.isArray(demandes) && demandes.length > 0 ? (
+                            demandes
+                                .filter(d => d && d.id_demande) // Vérifier que d existe
+                                .filter(d => !statutFilter || d.statut === statutFilter)
+                                .filter(d => !typeFilter || (d.typeDemande && d.typeDemande.nomType === typeFilter))
+                                .filter(d => !urgenceFilter || d.urgence === urgenceFilter)
+                                .map(d => (
                                 <div key={d.id_demande} className="col">
                                     <div className="bg-white rounded-3 shadow-sm p-3 h-100 d-flex flex-column justify-content-between">
                                         <div>
                                             <h5 className="fw-bold">{d.description}</h5>
                                             <p className="mb-1"><strong>Statut:</strong> {d.statut}</p>
                                             <p className="mb-1"><strong>Urgence:</strong> {d.urgence}</p>
-                                            <p className="mb-0"><strong>Type:</strong> {d.typeDemande.nom}</p>
+                                            <p className="mb-0">
+                                                <strong>Type:</strong> 
+                                                {d.typeDemande && d.typeDemande.nomType ? (
+                                                    d.typeDemande.nomType
+                                                ) : (
+                                                    <span className="text-danger">Type supprimé ou non défini</span>
+                                                )}
+                                            </p>
                                         </div>
 
                                         <div className="mt-3 d-flex gap-2 flex-wrap">
                                             {d.statut === "EN_COURS" && <button className="btn btn-warning btn-sm" onClick={() => handleAnnuler(d.id_demande)}>Annuler</button>}
-                                            {d.statut === "ACCEPTEE" && <button className="btn btn-info btn-sm" onClick={() => alert("Voir détails...")}>Détails</button>}
+                                            {d.statut === "ACCEPTEE" && <span className="badge bg-success">Demande acceptée</span>}
                                             {d.statut === "REFUSEE" && <button className="btn btn-danger btn-sm" onClick={() => handleSupprimer(d.id_demande)}>Supprimer</button>}
+                                            {d.statut === "ANNULEE" && <button className="btn btn-danger btn-sm" onClick={() => handleSupprimer(d.id_demande)}>Supprimer</button>}
+
                                         </div>
                                     </div>
                                 </div>
-                            ))}
+                            ))
+                        ) : null}
                     </div>
 
                 </div>

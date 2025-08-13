@@ -40,4 +40,54 @@ public class TypeDemandeController {
             return ResponseEntity.badRequest().body(error);
         }
     }
+
+    @DeleteMapping("/type-demandes/delete-all")
+    public ResponseEntity<?> deleteAllTypes() {
+        try {
+            System.out.println("🗑️ Suppression de tous les types de demandes");
+            int deletedCount = typeDemandeService.deleteAllTypes();
+            
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "Tous les types ont été supprimés",
+                "deletedCount", deletedCount
+            );
+            
+            System.out.println("✅ Suppression terminée: " + deletedCount + " types supprimés");
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la suppression: " + e.getMessage());
+            Map<String, Object> error = Map.of(
+                "success", false,
+                "message", e.getMessage()
+            );
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @PostMapping("/type-demandes/create")
+    public ResponseEntity<?> createCorrectTypes() {
+        try {
+            System.out.println("🔄 Création des types de demandes corrects");
+            int createdCount = typeDemandeService.createCorrectTypes();
+            
+            Map<String, Object> response = Map.of(
+                "success", true,
+                "message", "Types créés avec succès",
+                "createdCount", createdCount
+            );
+            
+            System.out.println("✅ Types créés: " + createdCount);
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la création: " + e.getMessage());
+            Map<String, Object> error = Map.of(
+                "success", false,
+                "message", e.getMessage()
+            );
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
 }

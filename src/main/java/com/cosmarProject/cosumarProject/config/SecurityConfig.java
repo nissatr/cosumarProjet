@@ -42,7 +42,7 @@ public class SecurityConfig {
         http.cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable) // Pour les APIs REST
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/register", "/api/v1.0/register", "/login", "/api/v1.0/login", "/verify-login-otp", "/api/v1.0/verify-login-otp", "/send-reset-otp", "/reset-password", "/logout", "/api/v1.0/logout", "/init-super-admin", "/api/v1.0/init-super-admin", "/init-roles", "/api/v1.0/init-roles", "/test").permitAll() // Autorise l'accès
+                        .requestMatchers("/register", "/api/v1.0/register", "/login", "/api/v1.0/login", "/verify-login-otp", "/api/v1.0/verify-login-otp", "/send-reset-otp", "/reset-password", "/logout", "/api/v1.0/logout", "/init-super-admin", "/api/v1.0/init-super-admin", "/init-roles", "/api/v1.0/init-roles", "/type-demandes", "/api/v1.0/type-demandes", "/type-demandes/delete-all", "/api/v1.0/type-demandes/delete-all", "/type-demandes/create", "/api/v1.0/type-demandes/create", "/delete-all-demands", "/api/v1.0/delete-all-demands", "/cleanup-invalid-demands", "/api/v1.0/cleanup-invalid-demands", "/mes-demandes", "/api/v1.0/mes-demandes", "/equipment", "/api/v1.0/equipment", "/test").permitAll() // Autorise l'accès
                         .anyRequest().authenticated() // Tout le reste est protégé
                 )
                 .sessionManagement(session ->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

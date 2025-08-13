@@ -25,25 +25,43 @@ public class EquipmentService {
      */
     // Dans EquipmentService
     public Demande createEquipmentRequest(EquipmentRequest request, String userEmail) {
+        System.out.println("🔄 Création de demande d'équipement");
+        System.out.println("📝 EquipmentType reçu: " + request.getEquipmentType());
+        System.out.println("📝 RequestType reçu: " + request.getRequestType());
+        
         Utilisateur demandeur = utilisateurRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
         // Conversion requestType -> DetailType
         final TypeDemande.DetailType finalDetailType;
-        if ("nouveau".equalsIgnoreCase(request.getRequestType())) finalDetailType = TypeDemande.DetailType.NOUVEAU;
-        else if ("changement".equalsIgnoreCase(request.getRequestType())) finalDetailType = TypeDemande.DetailType.CHANGEMENT;
-        else finalDetailType = null;
+        if (request.getRequestType() == null || request.getRequestType().isEmpty()) {
+            finalDetailType = null;
+        } else if ("nouveau".equalsIgnoreCase(request.getRequestType())) {
+            finalDetailType = TypeDemande.DetailType.NOUVEAU;
+        } else if ("changement".equalsIgnoreCase(request.getRequestType())) {
+            finalDetailType = TypeDemande.DetailType.CHANGEMENT;
+        } else {
+            finalDetailType = null;
+        }
+        
+        System.out.println("🔍 DetailType converti: " + finalDetailType);
 
 
+        // Afficher tous les types disponibles pour debug
+        System.out.println("🔍 Recherche du type: " + request.getEquipmentType() + " avec DetailType: " + finalDetailType);
+        System.out.println("📋 Types disponibles dans la base:");
+        typeDemandeRepository.findAll().forEach(type -> 
+            System.out.println("  - " + type.getNomType() + " (DetailType: " + type.getDetailType() + ", aDetailType: " + type.getADetailType() + ")")
+        );
+        
         TypeDemande typeDemande = typeDemandeRepository
                 .findByNomTypeAndDetailType(request.getEquipmentType(), finalDetailType)
-                .orElseGet(() -> typeDemandeRepository.save(
-                        TypeDemande.builder()
-                                .nomType(request.getEquipmentType())
-                                .detailType(finalDetailType)
-                                .aDetailType(true)
-                                .build()
+                .orElseThrow(() -> new RuntimeException(
+                    "Type de demande non trouvé: " + request.getEquipmentType() +
+                    " (" + (finalDetailType != null ? finalDetailType.toString() : "N/A") + ")"
                 ));
+        
+        System.out.println("✅ Type trouvé: " + typeDemande.getNomType() + " (ID: " + typeDemande.getId_Type() + ")");
 
 
         // ⚡ Convertir la chaîne urgencyLevel en enum
