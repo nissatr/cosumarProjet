@@ -1,15 +1,15 @@
 import { assets } from "../assets/assets.js";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { authService } from "../services/api.js";
 import { toast } from "react-toastify";
 import { useState, useEffect } from "react";
 
 const Sidebar = () => {
     const navigate = useNavigate();
-    const location = useLocation();
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+    const [isManager, setIsManager] = useState(false); // ✅ ajouté pour Manager N+1
 
     useEffect(() => {
         const fetchUserInfo = async () => {
@@ -17,6 +17,7 @@ const Sidebar = () => {
                 const info = await authService.getUserInfo();
                 setUserInfo(info);
                 setIsSuperAdmin(info.role === 'SUPER_ADMIN');
+                setIsManager(info.role === 'Manager N+1'); // ✅ détecte Manager N+1
             } catch (error) {
                 console.error("Erreur lors de la récupération des informations utilisateur:", error);
                 toast.error("Erreur lors du chargement des informations utilisateur");
@@ -43,7 +44,15 @@ const Sidebar = () => {
                 icon: "📄",
                 description: "Consulter et gérer mes demandes",
                 active: location.pathname === "/mes-demandes"
-            }
+            },
+            // ✅ Ajout de l'onglet Validation si Manager N+1
+            ...(isManager ? [{
+                id: "validation",
+                title: "Validation",
+                icon: "✅",
+                description: "Valider ou refuser les demandes de votre service",
+                active: location.pathname === "/validation"
+            }] : [])
         ]),
         {
             id: "notifications",
@@ -55,8 +64,6 @@ const Sidebar = () => {
         }
     ];
 
-
-
     const handleLogout = async () => {
         try {
             const response = await authService.logout();
@@ -65,12 +72,10 @@ const Sidebar = () => {
             } else {
                 toast.info("Déconnexion effectuée");
             }
-            // Forcer la redirection vers login
             window.location.href = "/login";
         } catch (error) {
             console.error("Erreur lors de la déconnexion:", error);
             toast.info("Déconnexion effectuée");
-            // Forcer la redirection même en cas d'erreur
             window.location.href = "/login";
         }
     };
@@ -86,22 +91,19 @@ const Sidebar = () => {
                 <div className="fs-7 opacity-75">Système de demandes</div>
             </div>
 
-            {/* Section Créer une nouvelle demande - Visible seulement pour les utilisateurs normaux */}
+            {/* Section Créer une nouvelle demande */}
             {!isSuperAdmin && (
                 <div className="p-3 border-bottom">
                     <div
                         className="d-flex align-items-center p-3 rounded-3 cursor-pointer text-primary hover-bg-light"
                         style={{
                             transition: "all 0.2s ease",
-                            cursor: "pointer",
                             backgroundColor: "#EBF3FF",
                             border: "1px solid #4A90E2"
                         }}
                         onClick={() => navigate("/nouvelle-demande")}
                     >
-                        <div className="me-3" style={{ fontSize: "1.2rem" }}>
-                            ➕
-                        </div>
+                        <div className="me-3" style={{ fontSize: "1.2rem" }}>➕</div>
                         <div>
                             <div className="fw-medium">Créer une nouvelle demande</div>
                         </div>
@@ -121,15 +123,10 @@ const Sidebar = () => {
                             className={`d-flex align-items-center p-3 rounded-3 mb-2 cursor-pointer ${
                                 item.active ? 'bg-primary text-white' : 'text-muted hover-bg-light'
                             }`}
-                            style={{
-                                transition: "all 0.2s ease",
-                                cursor: "pointer"
-                            }}
-                            onClick={() => navigate(`/${item.id}`)}
+                            style={{ transition: "all 0.2s ease" }}
+                            onClick={() => navigate(`/${item.id}`)} // ✅ dirige vers Validation.js si id="validation"
                         >
-                            <div className="me-3" style={{ fontSize: "1.2rem" }}>
-                                {item.icon}
-                            </div>
+                            <div className="me-3" style={{ fontSize: "1.2rem" }}>{item.icon}</div>
                             <div className="flex-grow-1">
                                 <div className="d-flex align-items-center justify-content-between">
                                     <span className="fw-medium">{item.title}</span>
@@ -145,27 +142,18 @@ const Sidebar = () => {
                     ))}
                 </div>
 
-
-
-                {/* Administration - Visible seulement pour Super Admin */}
+                {/* Administration */}
                 {isSuperAdmin && (
                     <div className="mb-4">
                         <h6 className="text-uppercase fw-bold text-muted mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
                             ADMINISTRATION
                         </h6>
                         <div
-                            className={`d-flex align-items-center p-3 rounded-3 mb-2 cursor-pointer ${
-                                location.pathname === "/admin" ? 'bg-primary text-white' : 'text-danger hover-bg-light'
-                            }`}
-                            style={{
-                                transition: "all 0.2s ease",
-                                cursor: "pointer"
-                            }}
+                            className="d-flex align-items-center p-3 rounded-3 mb-2 cursor-pointer text-danger hover-bg-light"
+                            style={{ transition: "all 0.2s ease" }}
                             onClick={() => navigate("/admin")}
                         >
-                            <div className="me-3" style={{ fontSize: "1.2rem" }}>
-                                👑
-                            </div>
+                            <div className="me-3" style={{ fontSize: "1.2rem" }}>👑</div>
                             <span className="fw-medium">Panel d'Administration</span>
                         </div>
                     </div>
@@ -184,29 +172,20 @@ const Sidebar = () => {
                 ) : userInfo ? (
                     <div className="d-flex align-items-start p-3 rounded-3 bg-light">
                         <div className="me-3 flex-shrink-0">
-                            <div 
+                            <div
                                 className="rounded-circle bg-primary d-flex align-items-center justify-content-center"
                                 style={{ width: "40px", height: "40px" }}
                             >
                                 <span className="text-white fw-bold">
-                                    {userInfo.prenom ? userInfo.prenom.charAt(0).toUpperCase() : 
-                                     userInfo.nom ? userInfo.nom.charAt(0).toUpperCase() : 'U'}
+                                    {userInfo.prenom ? userInfo.prenom.charAt(0).toUpperCase() :
+                                        userInfo.nom ? userInfo.nom.charAt(0).toUpperCase() : 'U'}
                                 </span>
                             </div>
                         </div>
                         <div className="flex-grow-1 min-w-0">
-                            <div className="fw-medium text-dark mb-1">
-                                {userInfo.prenom} {userInfo.nom}
-                            </div>
+                            <div className="fw-medium text-dark mb-1">{userInfo.prenom} {userInfo.nom}</div>
                             <div className="fs-7 text-muted mb-1">{userInfo.service || 'Service non défini'}</div>
-                            <div 
-                                className="fs-7 text-muted"
-                                style={{ 
-                                    wordBreak: "break-all",
-                                    lineHeight: "1.2"
-                                }}
-                                title={userInfo.email}
-                            >
+                            <div className="fs-7 text-muted" style={{ wordBreak: "break-all", lineHeight: "1.2" }} title={userInfo.email}>
                                 {userInfo.email}
                             </div>
                         </div>
@@ -216,12 +195,9 @@ const Sidebar = () => {
                         <span className="text-muted">Erreur de chargement</span>
                     </div>
                 )}
-                <div 
+                <div
                     className="d-flex align-items-center p-2 mt-2 rounded-3 cursor-pointer text-muted hover-bg-light"
-                    style={{
-                        transition: "all 0.2s ease",
-                        cursor: "pointer"
-                    }}
+                    style={{ transition: "all 0.2s ease" }}
                     onClick={handleLogout}
                 >
                     <span className="me-2">↪</span>
