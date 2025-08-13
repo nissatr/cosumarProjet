@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -36,4 +38,18 @@ public class Demande {
     private TypeDemande typeDemande;
 
     private String commentaireAutres;
+
+    @ManyToOne
+    @JoinColumn(name = "id_service")
+    private ServiceEntity service;
+
+
+
+    @Column(name = "approves_by_manager")
+    private Boolean approvedByManager = false;
+
+    @Column(name = "managers_approved_list")
+    @ElementCollection
+    private List<Long> managersApprovedList = new ArrayList<>();
+
 }
