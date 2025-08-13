@@ -8,4 +8,5 @@ import java.util.List;
 
 public interface DemandeRepository extends JpaRepository<Demande, Long> {
     List<Demande> findByDemandeur(Utilisateur demandeur);
+    
 }

@@ -10,6 +10,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import NouvelleDemande from "./pages/NouvelleDemande.jsx";
 import AdminPanel from "./pages/AdminPanel.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import MesDemandes from "./pages/MesDemandes.jsx";
 
 const App = () => {
   return (
@@ -37,6 +38,12 @@ const App = () => {
               <AdminPanel/>
             </ProtectedRoute>
           }></Route>
+          <Route path="/mes-demandes" element={
+            <ProtectedRoute>
+              <MesDemandes />
+            </ProtectedRoute>
+          }></Route>
+
         </Routes>
       </div>
   )

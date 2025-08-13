@@ -1,20 +1,26 @@
 package com.cosmarProject.cosumarProject.Controller;
 
+import com.cosmarProject.cosumarProject.model.Demande;
+import com.cosmarProject.cosumarProject.model.Utilisateur;
+import com.cosmarProject.cosumarProject.repository.DemandeRepository;
+import com.cosmarProject.cosumarProject.repository.UtilisateurRepository;
 import com.cosmarProject.cosumarProject.services.DemandeService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
 
+@RequiredArgsConstructor
 @RestController
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class DemandeController {
     private final DemandeService demandeService;
+    private final UtilisateurRepository utilisateurRepository;
+    private final DemandeRepository demandeRepository;
 
-    public DemandeController(DemandeService demandeService) {
-        this.demandeService = demandeService;
-    }
 
     @GetMapping("/admin/demandes")
     public ResponseEntity<?> getAllDemandes() {
@@ -39,4 +45,11 @@ public class DemandeController {
             return ResponseEntity.badRequest().body(error);
         }
     }
+    @GetMapping("/mes-demandes")
+    public List<Demande> getMesDemandes(Authentication authentication) {
+        Utilisateur user = utilisateurRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        return demandeRepository.findByDemandeur(user);
+    }
+
 }

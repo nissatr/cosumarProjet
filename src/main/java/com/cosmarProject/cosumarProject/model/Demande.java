@@ -19,6 +19,14 @@ public class Demande {
     private LocalDateTime dateCreation;
     private String description;
 
+
+    @Enumerated(EnumType.STRING)
+    private StatutDemande statut;  // EN_COURS, ACCEPTEE, REFUSEE, ANNULEE
+
+    @Enumerated(EnumType.STRING)
+    private UrgenceDemande urgence; // FAIBLE, NORMALE, ELEVEE
+
+
     @ManyToOne
     @JoinColumn(name = "id_demandeur")
     private Utilisateur demandeur;
