@@ -343,10 +343,12 @@ public class DemandeController {
             List<Demande> demandes;
 
             if ("Support IT".equals(roleUtilisateur)) {
-                // Pour Support IT : afficher TOUTES les demandes de tous les services
-                System.out.println("🔧 Support IT détecté - Affichage de toutes les demandes");
-                demandes = demandeRepository.findAll();
-                System.out.println("📊 Total des demandes pour Support IT: " + demandes.size());
+                // Pour Support IT : afficher seulement les demandes approuvées par les managers
+                System.out.println("🔧 Support IT détecté - Affichage des demandes approuvées par les managers");
+                demandes = demandeRepository.findAll().stream()
+                        .filter(d -> d.getApprovedByManager() != null && d.getApprovedByManager())
+                        .collect(Collectors.toList());
+                System.out.println("📊 Total des demandes approuvées par managers: " + demandes.size());
             } else if ("Manager N+1".equals(roleUtilisateur)) {
                 // Pour Manager N+1 : afficher seulement les demandes de son service
                 ServiceEntity serviceUtilisateur = utilisateur.getService();
