@@ -54,7 +54,9 @@ const NouvelleDemande = () => {
         try {
             // Mapping des IDs vers les labels pour le backend
             const selectedEquipment = equipmentTypes.find(type => type.id === equipmentType);
-            const equipmentTypeForBackend = equipmentType === "autre" ? otherEquipmentType : selectedEquipment.label;
+            
+            // Pour "Autres", envoyer "Autres" comme equipmentType et le détail dans un champ séparé
+            const equipmentTypeForBackend = selectedEquipment.label;
             
             // Pour les types sans options, ne pas envoyer de requestType
             const finalRequestType = selectedEquipment.hasOptions ? requestType : null;
@@ -64,7 +66,9 @@ const NouvelleDemande = () => {
                 requestType: finalRequestType,
                 description,
                 urgencyLevel,   // le backend pourra convertir en enum
-                signature
+                signature,
+                // Ajouter le détail pour "Autres"
+                otherEquipmentDetail: equipmentType === "autre" ? otherEquipmentType : null
             };
 
             const response = await equipmentService.createRequest(requestData);

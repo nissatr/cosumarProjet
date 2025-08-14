@@ -41,8 +41,15 @@ public class ValidationService {
         // Si un niveau refuse, on passe la demande en REFUSEE immédiatement
         if (!accepte) {
             demande.setStatut(StatutDemande.REFUSEE);
+            demande.setApprovedByManager(false);
             demandeRepository.save(demande);
             return;
+        }
+
+        // Si c'est un Manager N+1 qui approuve, marquer la demande comme approuvée par manager
+        if ("Manager N+1".equals(niveau)) {
+            demande.setApprovedByManager(true);
+            demandeRepository.save(demande);
         }
 
         // La demande reste EN_COURS pour les niveaux intermédiaires (Manager N+1, Support IT, SI)

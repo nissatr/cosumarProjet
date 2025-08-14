@@ -35,8 +35,40 @@ const Validation = () => {
                 console.log("📊 Données service reçues:", data);
             }
             
-            const newDemandes = Array.isArray(data) ? data : [];
+            // Gérer la nouvelle structure de données avec validation
+            let newDemandes;
+            if (Array.isArray(data)) {
+                // Ancien format (pour Support IT)
+                newDemandes = data;
+            } else if (data && Array.isArray(data.demandes)) {
+                // Nouveau format (pour Manager N+1) - données déjà structurées
+                newDemandes = data.demandes;
+                console.log("🔍 Demandes reçues:", newDemandes);
+                
+                // Debug: afficher les détails de chaque demande
+                newDemandes.forEach((d, index) => {
+                    console.log(`🔍 Demande ${index + 1}:`, {
+                        id: d.id_demande,
+                        statut: d.statut,
+                        dejaValidee: d.dejaValidee,
+                        validationExistante: d.validationExistante,
+                        demandeur: d.demandeur?.prenom + " " + d.demandeur?.nom,
+                        type: d.typeDemande?.nomType,
+                        description: d.description
+                    });
+                });
+            } else {
+                newDemandes = [];
+            }
+            
             console.log("✅ Demandes normalisées:", newDemandes.length);
+            console.log("🔍 Détail des demandes:", newDemandes.map(d => ({
+                id: d.id_demande,
+                statut: d.statut,
+                dejaValidee: d.dejaValidee,
+                demandeur: d.demandeur?.prenom + " " + d.demandeur?.nom,
+                type: d.typeDemande?.nomType
+            })));
 
             // Notifier le manager si des statuts ont changé depuis le dernier chargement
             if (previousDemandes.length > 0) {
@@ -339,16 +371,38 @@ const Validation = () => {
                                                     </small>
                                                 </td>
                                                 <td>
-                                                    {n1Decision[d.id_demande] === 'ACCEPTEE' ? (
+                                                    {d.dejaValidee ? (
+                                                        <div>
+                                                            {d.validationExistante && d.validationExistante.statut === 'REFUSEE' ? (
+                                                                <>
+                                                                    <span className="badge bg-danger">❌ Refusée</span>
+                                                                    <br />
+                                                                    <small className="text-muted">
+                                                                        Refusée le {new Date(d.validationExistante.dateValidation).toLocaleDateString('fr-FR')}
+                                                                    </small>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <span className="badge bg-success">✅ Approuvée</span>
+                                                                    <br />
+                                                                    <small className="text-muted">
+                                                                        Approuvée le {new Date(d.validationExistante.dateValidation).toLocaleDateString('fr-FR')}
+                                                                    </small>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    ) : n1Decision[d.id_demande] === 'ACCEPTEE' ? (
                                                         <span className="badge bg-success">✅ Approuvée</span>
                                                     ) : n1Decision[d.id_demande] === 'REFUSEE' ? (
                                                         <span className="badge bg-danger">❌ Refusée</span>
-                                                    ) : d.statut === "EN_COURS" ? (
-                                                        <span className="badge bg-primary">En cours</span>
+                                                    ) : d.statut === "REFUSEE" ? (
+                                                        <span className="badge bg-danger">❌ Refusée</span>
                                                     ) : d.statut === "ACCEPTEE" ? (
                                                         <span className="badge bg-success">✅ Approuvée</span>
+                                                    ) : d.statut === "EN_COURS" ? (
+                                                        <span className="badge bg-primary">En cours</span>
                                                     ) : (
-                                                        <span className="badge bg-danger">❌ Refusée</span>
+                                                        <span className="badge bg-primary">En cours</span>
                                                     )}
                                                 </td>
                                                 <td>
@@ -361,7 +415,7 @@ const Validation = () => {
                                                             📋 Voir
                                                         </button>
 
-                                                        {!isSupportIT && d.statut === "EN_COURS" && n1Decision[d.id_demande] !== 'ACCEPTEE' && n1Decision[d.id_demande] !== 'REFUSEE' && (
+                                                        {!isSupportIT && d.statut === "EN_COURS" && !d.dejaValidee && n1Decision[d.id_demande] !== 'ACCEPTEE' && n1Decision[d.id_demande] !== 'REFUSEE' && (
                                                             <>
                                                                 <button
                                                                     className="btn btn-success btn-sm"
@@ -378,6 +432,15 @@ const Validation = () => {
                                                                     ❌ Refuser
                                                                 </button>
                                                             </>
+                                                        )}
+                                                        {!isSupportIT && d.dejaValidee && (
+                                                            <span className="text-muted small">
+                                                                {d.validationExistante && d.validationExistante.statut === 'REFUSEE' ? (
+                                                                    <>❌ Déjà refusée</>
+                                                                ) : (
+                                                                    <>✅ Déjà validée</>
+                                                                )}
+                                                            </span>
                                                         )}
                                                     </div>
                                                 </td>

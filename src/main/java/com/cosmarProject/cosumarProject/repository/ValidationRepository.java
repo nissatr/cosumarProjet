@@ -10,4 +10,13 @@ import java.util.List;
 public interface ValidationRepository extends JpaRepository<Validation, Long> {
     @Query("SELECT v FROM Validation v WHERE v.demande.id_demande = :demandeId AND v.niveau = :niveau ORDER BY v.dateValidation DESC")
     List<Validation> findLatestByDemandeAndNiveau(@Param("demandeId") Long demandeId, @Param("niveau") String niveau);
+    
+    @Query("SELECT COUNT(v) > 0 FROM Validation v WHERE v.demande = :demande AND v.validateur = :validateur")
+    boolean existsByDemandeAndValidateur(@Param("demande") com.cosmarProject.cosumarProject.model.Demande demande, @Param("validateur") com.cosmarProject.cosumarProject.model.Utilisateur validateur);
+    
+    @Query("SELECT v FROM Validation v WHERE v.validateur = :validateur")
+    List<Validation> findByValidateur(@Param("validateur") com.cosmarProject.cosumarProject.model.Utilisateur validateur);
+    
+    // Méthode pour trouver toutes les validations d'une demande
+    List<Validation> findByDemande(com.cosmarProject.cosumarProject.model.Demande demande);
 }

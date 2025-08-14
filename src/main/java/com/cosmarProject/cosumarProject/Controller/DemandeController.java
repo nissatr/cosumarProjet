@@ -14,11 +14,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import com.cosmarProject.cosumarProject.model.Validation;
+import com.cosmarProject.cosumarProject.repository.ValidationRepository;
 
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
@@ -29,6 +31,7 @@ public class DemandeController {
     private final UtilisateurRepository utilisateurRepository;
     private final DemandeRepository demandeRepository;
     private final ValidationService validationService;
+    private final ValidationRepository validationRepository;
 
 
     @GetMapping("/admin/demandes")
@@ -164,12 +167,40 @@ public class DemandeController {
     }
 
     @DeleteMapping("/demandes/{id}")
-    public ResponseEntity<Void> supprimerDemande(@PathVariable Long id) {
-        if(demandeRepository.existsById(id)) {
-            demandeRepository.deleteById(id); // Supprime la demande
-            return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.notFound().build();
+    public ResponseEntity<?> supprimerDemande(@PathVariable Long id) {
+        try {
+            if(demandeRepository.existsById(id)) {
+                // Récupérer la demande
+                Demande demande = demandeRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Demande non trouvée"));
+                
+                // Supprimer d'abord toutes les validations associées à cette demande
+                List<Validation> validations = validationRepository.findByDemande(demande);
+                if (!validations.isEmpty()) {
+                    System.out.println("🗑️ Suppression de " + validations.size() + " validation(s) pour la demande " + id);
+                    validationRepository.deleteAll(validations);
+                }
+                
+                // Maintenant supprimer la demande
+                demandeRepository.deleteById(id);
+                System.out.println("✅ Demande " + id + " supprimée avec succès");
+                
+                return ResponseEntity.ok(Map.of(
+                        "success", true,
+                        "message", "Demande supprimée avec succès"
+                ));
+            } else {
+                return ResponseEntity.status(404).body(Map.of(
+                        "success", false,
+                        "message", "Demande non trouvée"
+                ));
+            }
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la suppression de la demande " + id + ": " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", "Erreur lors de la suppression: " + e.getMessage()
+            ));
         }
     }
 
@@ -305,31 +336,164 @@ public class DemandeController {
             Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
                     .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
 
-            // Récupérer le service de l'utilisateur connecté
-            ServiceEntity serviceUtilisateur = utilisateur.getService();
-            if (serviceUtilisateur == null) {
-                return ResponseEntity.badRequest().body(Map.of(
+            // Vérifier le rôle de l'utilisateur
+            String roleUtilisateur = utilisateur.getRole().getNom();
+            System.out.println("🎭 Rôle de l'utilisateur: " + roleUtilisateur);
+
+            List<Demande> demandes;
+
+            if ("Support IT".equals(roleUtilisateur)) {
+                // Pour Support IT : afficher TOUTES les demandes de tous les services
+                System.out.println("🔧 Support IT détecté - Affichage de toutes les demandes");
+                demandes = demandeRepository.findAll();
+                System.out.println("📊 Total des demandes pour Support IT: " + demandes.size());
+            } else if ("Manager N+1".equals(roleUtilisateur)) {
+                // Pour Manager N+1 : afficher seulement les demandes de son service
+                ServiceEntity serviceUtilisateur = utilisateur.getService();
+                if (serviceUtilisateur == null) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                            "success", false,
+                            "message", "Aucun service associé à cet utilisateur"
+                    ));
+                }
+
+                System.out.println("👔 Manager N+1 détecté - Service: " + serviceUtilisateur.getNom() + " (ID: " + serviceUtilisateur.getId_service() + ")");
+
+                // Debug: afficher toutes les demandes
+                List<Demande> toutesDemandes = demandeRepository.findAll();
+                System.out.println("📊 Total des demandes en base: " + toutesDemandes.size());
+                
+                // Debug: afficher les services des demandeurs et services directs
+                toutesDemandes.forEach(d -> {
+                    System.out.println("🔍 Demande ID: " + d.getId_demande());
+                    
+                    // Service du demandeur
+                    if (d.getDemandeur() != null && d.getDemandeur().getService() != null) {
+                        System.out.println("  - Service demandeur: " + d.getDemandeur().getService().getNom() + 
+                                         " (ID: " + d.getDemandeur().getService().getId_service() + ")");
+                    } else {
+                        System.out.println("  - Service demandeur: null");
+                    }
+                    
+                    // Service direct de la demande
+                    if (d.getService() != null) {
+                        System.out.println("  - Service direct: " + d.getService().getNom() + 
+                                         " (ID: " + d.getService().getId_service() + ")");
+                    } else {
+                        System.out.println("  - Service direct: null");
+                    }
+                });
+
+                // ✅ Filtrer sur le service du demandeur OU le service direct de la demande
+                // ET inclure TOUTES les demandes (même celles refusées ou acceptées)
+                demandes = toutesDemandes.stream()
+                        .filter(d -> {
+                            // Vérifier le service du demandeur
+                            boolean serviceDemandeur = d.getDemandeur() != null &&
+                                    d.getDemandeur().getService() != null &&
+                                    d.getDemandeur().getService().getId_service()
+                                            .equals(serviceUtilisateur.getId_service());
+                            
+                            // Vérifier le service direct de la demande
+                            boolean serviceDirect = d.getService() != null &&
+                                    d.getService().getId_service()
+                                            .equals(serviceUtilisateur.getId_service());
+                            
+                            return serviceDemandeur || serviceDirect;
+                        })
+                        .collect(Collectors.toList());
+            } else {
+                // Rôle non reconnu
+                return ResponseEntity.status(403).body(Map.of(
                         "success", false,
-                        "message", "Aucun service associé à cet utilisateur"
+                        "message", "Rôle non autorisé: " + roleUtilisateur
                 ));
             }
 
-            System.out.println("🔍 Service de l'utilisateur: " + serviceUtilisateur.getNom());
+            System.out.println("✅ Nombre de demandes trouvées: " + demandes.size());
+            
+            // Debug: afficher les validations existantes pour cet utilisateur
+            List<Validation> validationsUtilisateur = validationRepository.findByValidateur(utilisateur);
+            System.out.println("🔍 Nombre de validations par cet utilisateur: " + validationsUtilisateur.size());
+            validationsUtilisateur.forEach(v -> {
+                System.out.println("  - Validation ID: " + v.getId_validation() + 
+                                 ", Demande ID: " + v.getDemande().getId_demande() + 
+                                 ", Niveau: " + v.getNiveau() + 
+                                 ", Statut: " + v.getStatutValidation());
+            });
 
-            // ✅ Filtrer sur le service du demandeur, toutes les demandes (pas seulement EN_COURS)
-            List<Demande> demandes = demandeRepository.findAll().stream()
-                    .filter(d -> d.getDemandeur() != null &&
-                            d.getDemandeur().getService() != null &&
-                            d.getDemandeur().getService().getId_service()
-                                    .equals(serviceUtilisateur.getId_service()))
+            // Créer une liste avec les informations de validation pour chaque demande
+            List<Map<String, Object>> demandesAvecValidation = demandes.stream()
+                    .map(d -> {
+                        // Vérifier si cette demande a été validée par cet utilisateur
+                        boolean dejaValidee = validationRepository.existsByDemandeAndValidateur(d, utilisateur);
+                        
+                        // Trouver la validation existante si elle existe
+                        Validation validationExistante = validationsUtilisateur.stream()
+                                .filter(v -> v.getDemande().getId_demande().equals(d.getId_demande()))
+                                .findFirst()
+                                .orElse(null);
+                        
+                        // Créer un Map qui combine directement les propriétés de la demande avec les infos de validation
+                        Map<String, Object> demandeInfo = new HashMap<>();
+                        
+                        // Ajouter toutes les propriétés de la demande directement
+                        demandeInfo.put("id_demande", d.getId_demande());
+                        demandeInfo.put("description", d.getDescription());
+                        demandeInfo.put("statut", d.getStatut());
+                        demandeInfo.put("urgence", d.getUrgence());
+                        demandeInfo.put("dateCreation", d.getDateCreation());
+                        demandeInfo.put("commentaireAutres", d.getCommentaireAutres());
+                        
+                        // Ajouter le demandeur
+                        if (d.getDemandeur() != null) {
+                            Map<String, Object> demandeurInfo = new HashMap<>();
+                            demandeurInfo.put("id_utilisateur", d.getDemandeur().getId_utilisateur());
+                            demandeurInfo.put("nom", d.getDemandeur().getNom());
+                            demandeurInfo.put("prenom", d.getDemandeur().getPrenom());
+                            demandeurInfo.put("email", d.getDemandeur().getEmail());
+                            if (d.getDemandeur().getService() != null) {
+                                Map<String, Object> serviceInfo = new HashMap<>();
+                                serviceInfo.put("id_service", d.getDemandeur().getService().getId_service());
+                                serviceInfo.put("nom", d.getDemandeur().getService().getNom());
+                                demandeurInfo.put("service", serviceInfo);
+                            }
+                            demandeInfo.put("demandeur", demandeurInfo);
+                        }
+                        
+                        // Ajouter le type de demande
+                        if (d.getTypeDemande() != null) {
+                            Map<String, Object> typeInfo = new HashMap<>();
+                            typeInfo.put("id_type", d.getTypeDemande().getId_Type());
+                            typeInfo.put("nomType", d.getTypeDemande().getNomType());
+                            typeInfo.put("detailType", d.getTypeDemande().getDetailType());
+                            typeInfo.put("aDetailType", d.getTypeDemande().getADetailType());
+                            demandeInfo.put("typeDemande", typeInfo);
+                        }
+                        
+                        // Ajouter les informations de validation
+                        demandeInfo.put("dejaValidee", dejaValidee);
+                        
+                        if (validationExistante != null) {
+                            Map<String, Object> validationInfo = new HashMap<>();
+                            validationInfo.put("statut", validationExistante.getStatutValidation());
+                            validationInfo.put("commentaire", validationExistante.getCommentaire());
+                            validationInfo.put("dateValidation", validationExistante.getDateValidation());
+                            demandeInfo.put("validationExistante", validationInfo);
+                        } else {
+                            demandeInfo.put("validationExistante", null);
+                        }
+                        
+                        return demandeInfo;
+                    })
                     .collect(Collectors.toList());
 
-            System.out.println("✅ Nombre de demandes EN_COURS trouvées: " + demandes.size());
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("demandes", demandesAvecValidation);
 
-            Map<String, Object> response = Map.of(
-                    "success", true,
-                    "demandes", demandes
-            );
+            // Debug: afficher le nombre de demandes
+            System.out.println("✅ Nombre de demandes avec validation: " + demandesAvecValidation.size());
 
             return ResponseEntity.ok(response);
 

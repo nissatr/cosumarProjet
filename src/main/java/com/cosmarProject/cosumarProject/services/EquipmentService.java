@@ -54,12 +54,24 @@ public class EquipmentService {
             System.out.println("  - " + type.getNomType() + " (DetailType: " + type.getDetailType() + ", aDetailType: " + type.getADetailType() + ")")
         );
         
-        TypeDemande typeDemande = typeDemandeRepository
-                .findByNomTypeAndDetailType(request.getEquipmentType(), finalDetailType)
-                .orElseThrow(() -> new RuntimeException(
-                    "Type de demande non trouvé: " + request.getEquipmentType() +
-                    " (" + (finalDetailType != null ? finalDetailType.toString() : "N/A") + ")"
-                ));
+        TypeDemande typeDemande;
+        
+        // Gestion spéciale pour "Autres"
+        if ("Autres".equals(request.getEquipmentType())) {
+            // Pour "Autres", on cherche le type "Autres" avec DetailType null
+            typeDemande = typeDemandeRepository
+                    .findByNomTypeAndDetailType("Autres", null)
+                    .orElseThrow(() -> new RuntimeException("Type de demande 'Autres' non trouvé"));
+            System.out.println("✅ Type 'Autres' trouvé pour équipement personnalisé");
+        } else {
+            // Pour les autres types, recherche normale
+            typeDemande = typeDemandeRepository
+                    .findByNomTypeAndDetailType(request.getEquipmentType(), finalDetailType)
+                    .orElseThrow(() -> new RuntimeException(
+                        "Type de demande non trouvé: " + request.getEquipmentType() +
+                        " (" + (finalDetailType != null ? finalDetailType.toString() : "N/A") + ")"
+                    ));
+        }
         
         System.out.println("✅ Type trouvé: " + typeDemande.getNomType() + " (ID: " + typeDemande.getId_Type() + ")");
 
@@ -81,8 +93,8 @@ public class EquipmentService {
                 .typeDemande(typeDemande)
                 .statut(StatutDemande.EN_COURS)   // ⚡ Statut par défaut
                 .urgence(urgence)                 // ⚡ Niveau d'urgence
-                .commentaireAutres(request.getEquipmentType() +
-                        (request.getRequestType() != null ? " - " + request.getRequestType() : ""))
+                .commentaireAutres("Autres".equals(request.getEquipmentType()) ? 
+                    request.getOtherEquipmentDetail() : null)
                 .build();
 
         return demandeRepository.save(demande);

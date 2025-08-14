@@ -26,4 +26,7 @@ public class EquipmentRequest {
     
     @NotNull(message = "La signature électronique est obligatoire")
     private Boolean signature;
+    
+    // Champ optionnel pour le détail de l'équipement personnalisé (pour "Autres")
+    private String otherEquipmentDetail;
 }
