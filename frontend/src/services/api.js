@@ -198,6 +198,12 @@ export const demandeService = {
     getRapportIT: async (demandeId) => {
         const response = await api.get(`/demandes/${demandeId}/rapport-it`);
         return response.data;
+    },
+
+    // Debug Support IT
+    debugSupportIT: async () => {
+        const response = await api.get('/demandes/debug-support-it');
+        return response.data;
     }
 };
 

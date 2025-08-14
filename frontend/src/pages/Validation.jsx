@@ -24,12 +24,19 @@ const Validation = () => {
         try {
             console.log("🔍 fetchDemandes - Rôle détecté:", { isSupportIT, isManagerN1 });
             
-            const data = isSupportIT
-                ? await demandeService.getDemandesSupportIT()
-                : await demandeService.getMesDemandesService();
+            let data;
+            if (isSupportIT) {
+                console.log("🔄 Récupération des demandes pour Support IT...");
+                data = await demandeService.getDemandesSupportIT();
+                console.log("📊 Données Support IT reçues:", data);
+            } else {
+                console.log("🔄 Récupération des demandes du service...");
+                data = await demandeService.getMesDemandesService();
+                console.log("📊 Données service reçues:", data);
+            }
             
-            console.log("📊 Données reçues:", data);
             const newDemandes = Array.isArray(data) ? data : [];
+            console.log("✅ Demandes normalisées:", newDemandes.length);
 
             // Notifier le manager si des statuts ont changé depuis le dernier chargement
             if (previousDemandes.length > 0) {
@@ -186,6 +193,17 @@ const Validation = () => {
         }
     };
 
+    const handleDebugSupportIT = async () => {
+        try {
+            const response = await demandeService.debugSupportIT();
+            console.log("Debug Support IT Response:", response);
+            toast.success("Debug Support IT terminé avec succès!", { position: "top-right" });
+        } catch (error) {
+            console.error("Erreur lors du debug Support IT:", error);
+            toast.error("❌ Erreur lors du debug Support IT", { position: "top-right" });
+        }
+    };
+
     return (
         <div className="d-flex" style={{ height: "100vh", backgroundColor: "#f8f9fa" }}>
             <Sidebar />
@@ -205,6 +223,15 @@ const Validation = () => {
                                 }
                             </small>
                         </div>
+                        {isSupportIT && (
+                            <button 
+                                className="btn btn-outline-light btn-sm ms-auto"
+                                onClick={handleDebugSupportIT}
+                                title="Debug Support IT"
+                            >
+                                🔍 Debug
+                            </button>
+                        )}
                     </div>
 
                     {/* FILTRES */}
@@ -361,7 +388,24 @@ const Validation = () => {
                             </div>
                         ) : (
                             <div className="p-5 text-center">
-                                <p className="text-muted">Aucune demande trouvée pour votre service</p>
+                                <p className="text-muted">
+                                    {isSupportIT 
+                                        ? "Aucune demande validée par les managers N+1 trouvée. Le Support IT voit uniquement les demandes qui ont été approuvées par les managers N+1 de tous services."
+                                        : "Aucune demande trouvée pour votre service"
+                                    }
+                                </p>
+                                {isSupportIT && (
+                                    <div className="mt-3 p-3 bg-light rounded">
+                                        <h6>ℹ️ Information</h6>
+                                        <p className="mb-2">En tant que Support IT, vous voyez uniquement les demandes qui :</p>
+                                        <ul className="text-start text-muted">
+                                            <li>Ont le statut "EN_COURS"</li>
+                                            <li>Ont été validées par un Manager N+1</li>
+                                            <li>N'ont pas encore été traitées par le Support IT</li>
+                                            <li>Proviennent de tous les services</li>
+                                        </ul>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </div>

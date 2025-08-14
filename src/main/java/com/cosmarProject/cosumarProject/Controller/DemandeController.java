@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import com.cosmarProject.cosumarProject.model.Validation;
 
 @RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
@@ -351,31 +352,114 @@ public class DemandeController {
             List<Demande> toutesDemandes = demandeRepository.findAll();
             System.out.println("📊 Total des demandes en base: " + toutesDemandes.size());
             
-            // Debug: vérifier les validations existantes
-            List<Demande> demandes = demandeRepository.findDemandesPourSupportIT();
+            // Debug: vérifier les demandes avec statut EN_COURS
+            List<Demande> demandesEnCours = toutesDemandes.stream()
+                .filter(d -> d.getStatut() == StatutDemande.EN_COURS)
+                .collect(Collectors.toList());
+            System.out.println("📊 Demandes avec statut EN_COURS: " + demandesEnCours.size());
             
-            System.out.println("✅ Nombre de demandes trouvées pour Support IT: " + demandes.size());
+            // Debug: vérifier les validations existantes avec la méthode originale
+            List<Demande> demandes = demandeRepository.findDemandesPourSupportIT();
+            System.out.println("✅ Nombre de demandes trouvées pour Support IT (méthode originale): " + demandes.size());
+            
+            // Debug: essayer la méthode alternative
+            List<Demande> demandesAlternative = demandeRepository.findDemandesValideesParManagerN1();
+            System.out.println("✅ Nombre de demandes trouvées pour Support IT (méthode alternative): " + demandesAlternative.size());
+            
+            // Utiliser la méthode qui donne le plus de résultats
+            List<Demande> demandesFinales = demandesAlternative.size() > demandes.size() ? demandesAlternative : demandes;
+            System.out.println("✅ Nombre final de demandes pour Support IT: " + demandesFinales.size());
             
             // Debug: afficher les détails des demandes trouvées
-            if (demandes.size() > 0) {
-                demandes.forEach(d -> {
+            if (demandesFinales.size() > 0) {
+                demandesFinales.forEach(d -> {
                     System.out.println("🔍 Demande ID: " + d.getId_demande() + 
                                      ", Statut: " + d.getStatut() + 
                                      ", Demandeur: " + (d.getDemandeur() != null ? d.getDemandeur().getEmail() : "null") +
+                                     ", Service: " + (d.getDemandeur() != null && d.getDemandeur().getService() != null ? d.getDemandeur().getService().getNom() : "null") +
+                                     ", Urgence: " + d.getUrgence() +
+                                     ", Date création: " + d.getDateCreation());
+                });
+            } else {
+                System.out.println("⚠️ Aucune demande trouvée pour Support IT");
+                // Debug: afficher toutes les demandes EN_COURS pour comprendre pourquoi
+                System.out.println("🔍 Détail des demandes EN_COURS:");
+                demandesEnCours.forEach(d -> {
+                    System.out.println("  - ID: " + d.getId_demande() + 
                                      ", Service: " + (d.getDemandeur() != null && d.getDemandeur().getService() != null ? d.getDemandeur().getService().getNom() : "null"));
                 });
             }
             
             return ResponseEntity.ok(Map.of(
-                    "success", true,
-                    "demandes", demandes
+                "success", true,
+                "demandes", demandesFinales
             ));
         } catch (Exception e) {
             System.out.println("❌ Erreur lors de la récupération des demandes Support IT: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).body(Map.of(
-                    "success", false,
-                    "message", e.getMessage()
+                "success", false,
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    // ===================== ENDPOINT DE TEST =====================
+    @GetMapping("/demandes/debug-support-it")
+    public ResponseEntity<?> debugSupportIT() {
+        try {
+            System.out.println("🔍 DEBUG: Analyse des données pour Support IT");
+            
+            // Récupérer toutes les demandes
+            List<Demande> toutesDemandes = demandeRepository.findAll();
+            System.out.println("📊 Total des demandes: " + toutesDemandes.size());
+            
+            // Récupérer toutes les validations
+            List<Validation> toutesValidations = validationService.getAllValidations();
+            System.out.println("📊 Total des validations: " + toutesValidations.size());
+            
+            // Analyser les validations par niveau
+            Map<String, Long> validationsParNiveau = toutesValidations.stream()
+                .collect(Collectors.groupingBy(Validation::getNiveau, Collectors.counting()));
+            System.out.println("📊 Validations par niveau: " + validationsParNiveau);
+            
+            // Analyser les validations par statut
+            Map<String, Long> validationsParStatut = toutesValidations.stream()
+                .collect(Collectors.groupingBy(Validation::getStatutValidation, Collectors.counting()));
+            System.out.println("📊 Validations par statut: " + validationsParStatut);
+            
+            // Trouver les demandes avec validation Manager N+1 ACCEPTEE
+            List<Demande> demandesValideesManager = toutesDemandes.stream()
+                .filter(d -> d.getStatut() == StatutDemande.EN_COURS)
+                .filter(d -> toutesValidations.stream()
+                    .anyMatch(v -> v.getDemande().getId_demande().equals(d.getId_demande()) 
+                        && "Manager N+1".equals(v.getNiveau()) 
+                        && "ACCEPTEE".equals(v.getStatutValidation())))
+                .collect(Collectors.toList());
+            
+            System.out.println("📊 Demandes validées par Manager N+1: " + demandesValideesManager.size());
+            
+            // Créer un rapport de debug
+            Map<String, Object> debugInfo = Map.of(
+                "totalDemandes", toutesDemandes.size(),
+                "totalValidations", toutesValidations.size(),
+                "validationsParNiveau", validationsParNiveau,
+                "validationsParStatut", validationsParStatut,
+                "demandesValideesManager", demandesValideesManager.size(),
+                "demandesEnCours", toutesDemandes.stream().filter(d -> d.getStatut() == StatutDemande.EN_COURS).count()
+            );
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "debugInfo", debugInfo
+            ));
+            
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors du debug: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "message", e.getMessage()
             ));
         }
     }

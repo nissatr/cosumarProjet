@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -50,6 +51,13 @@ public class ValidationService {
             demande.setStatut(StatutDemande.ACCEPTEE);
             demandeRepository.save(demande);
         }
+    }
+
+    /**
+     * Récupérer toutes les validations (pour debug)
+     */
+    public List<Validation> getAllValidations() {
+        return validationRepository.findAll();
     }
 }
 

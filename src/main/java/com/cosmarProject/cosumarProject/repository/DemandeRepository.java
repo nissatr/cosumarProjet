@@ -23,7 +23,7 @@ public interface DemandeRepository extends JpaRepository<Demande, Long> {
     """)
     List<Demande> findDemandesPourManager(@Param("serviceId") Long serviceId);
 
-    // Support IT : voit les demandes validées par Manager N+1
+    // Support IT : voit les demandes validées par Manager N+1 de tous services
     @Query("""
         SELECT DISTINCT d FROM Demande d
         JOIN d.demandeur u
@@ -40,8 +40,22 @@ public interface DemandeRepository extends JpaRepository<Demande, Long> {
             WHERE v.demande = d
             AND v.niveau = 'Support IT'
         )
+        ORDER BY d.urgence DESC, d.dateCreation ASC
     """)
     List<Demande> findDemandesPourSupportIT();
+
+    // Méthode alternative plus simple pour Support IT
+    @Query("""
+        SELECT d FROM Demande d
+        WHERE d.statut = 'EN_COURS'
+        AND EXISTS (
+            SELECT v FROM Validation v
+            WHERE v.demande = d
+            AND v.niveau = 'Manager N+1'
+            AND v.statutValidation = 'ACCEPTEE'
+        )
+    """)
+    List<Demande> findDemandesValideesParManagerN1();
 
 
     @Query("""
