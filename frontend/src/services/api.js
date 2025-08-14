@@ -138,12 +138,65 @@ export const demandeService = {
         });
         return response.data.demandes || [];
     },
+
+    // Demandes du service du manager connecté (N+1)
+    getMesDemandesService: async () => {
+        const response = await api.get(`/demandes/mes-demandes-service`, {
+            params: { _t: Date.now() }
+        });
+        // Le backend renvoie { success, demandes } → on normalise
+        return response.data?.demandes || [];
+    },
+
+    // Demandes pour Support IT (tous services validés par N+1 et pas encore traités par Support IT)
+    getDemandesSupportIT: async () => {
+        const response = await api.get(`/demandes/support-it`, {
+            params: { _t: Date.now() }
+        });
+        return response.data?.demandes || [];
+    },
+
+    getDemandesByService: async (service) => {
+        const response = await api.get(`/demandes/service/${encodeURIComponent(service)}`, {
+            params: { _t: Date.now() }
+        });
+        return response.data.demandes || [];
+    },
+
     annulerDemande: async (id) => {
         const response = await api.post(`/demandes/${id}/annuler`);
         return response.data;
     },
+
     supprimerDemande: async (id) => {
         const response = await api.delete(`/demandes/${id}`);
+        return response.data;
+    },
+
+    approveDemande: async (id) => {
+        const response = await api.put(`/demandes/${id}/approve`);
+        return response.data;
+    },
+
+    rejectDemande: async (id) => {
+        const response = await api.put(`/demandes/${id}/reject`);
+        return response.data;
+    },
+
+    // Soumettre rapport IT
+    submitRapportIT: async (id, { fichier, commentaire }) => {
+        const formData = new FormData();
+        if (fichier) formData.append('fichier', fichier);
+        if (commentaire) formData.append('commentaire', commentaire);
+        const response = await api.post(`/demandes/${id}/rapport-it`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+    },
+
+    // Récupérer le rapport IT d'une demande
+    getRapportIT: async (demandeId) => {
+        const response = await api.get(`/demandes/${demandeId}/rapport-it`);
         return response.data;
     }
 };

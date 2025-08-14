@@ -9,7 +9,8 @@ const Sidebar = () => {
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-    const [isManager, setIsManager] = useState(false); // ✅ ajouté pour Manager N+1
+    const [isManager, setIsManager] = useState(false); // ✅ Manager N+1
+    const [isSupportIT, setIsSupportIT] = useState(false); // ✅ Support IT
 
     useEffect(() => {
         const fetchUserInfo = async () => {
@@ -17,7 +18,8 @@ const Sidebar = () => {
                 const info = await authService.getUserInfo();
                 setUserInfo(info);
                 setIsSuperAdmin(info.role === 'SUPER_ADMIN');
-                setIsManager(info.role === 'Manager N+1'); // ✅ détecte Manager N+1
+                setIsManager(info.role === 'Manager N+1');
+                setIsSupportIT(info.role === 'Support IT');
             } catch (error) {
                 console.error("Erreur lors de la récupération des informations utilisateur:", error);
                 toast.error("Erreur lors du chargement des informations utilisateur");
@@ -45,23 +47,16 @@ const Sidebar = () => {
                 description: "Consulter et gérer mes demandes",
                 active: location.pathname === "/mes-demandes"
             },
-            // ✅ Ajout de l'onglet Validation si Manager N+1
-            ...(isManager ? [{
+            // ✅ Ajout de l'onglet Validation si Manager N+1 ou Support IT
+            ...((isManager || isSupportIT) ? [{
                 id: "validation",
                 title: "Validation",
                 icon: "✅",
-                description: "Valider ou refuser les demandes de votre service",
+                description: isSupportIT ? "Traiter les demandes (tous services)" : "Valider ou refuser les demandes de votre service",
                 active: location.pathname === "/validation"
             }] : [])
         ]),
-        {
-            id: "notifications",
-            title: "Notifications",
-            icon: "🔔",
-            description: "Alertes et changements de statut",
-            badge: 3,
-            active: location.pathname === "/notifications"
-        }
+
     ];
 
     const handleLogout = async () => {

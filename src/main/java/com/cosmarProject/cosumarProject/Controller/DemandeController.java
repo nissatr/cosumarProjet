@@ -1,11 +1,14 @@
 package com.cosmarProject.cosumarProject.Controller;
 
 import com.cosmarProject.cosumarProject.model.Demande;
+import com.cosmarProject.cosumarProject.model.ServiceEntity;
 import com.cosmarProject.cosumarProject.model.StatutDemande;
 import com.cosmarProject.cosumarProject.model.Utilisateur;
 import com.cosmarProject.cosumarProject.repository.DemandeRepository;
+import com.cosmarProject.cosumarProject.repository.ServiceRepository;
 import com.cosmarProject.cosumarProject.repository.UtilisateurRepository;
 import com.cosmarProject.cosumarProject.services.DemandeService;
+import com.cosmarProject.cosumarProject.services.ValidationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,12 +20,14 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
-@RestController
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+@RestController
 public class DemandeController {
     private final DemandeService demandeService;
+    private final ServiceRepository serviceRepository;
     private final UtilisateurRepository utilisateurRepository;
     private final DemandeRepository demandeRepository;
+    private final ValidationService validationService;
 
 
     @GetMapping("/admin/demandes")
@@ -167,4 +172,211 @@ public class DemandeController {
         }
     }
 
+    @GetMapping("/demandes/service/{serviceId}")
+    public ResponseEntity<?> getDemandesByService(@PathVariable Long serviceId) {
+        try {
+            System.out.println("🔄 Récupération des demandes pour le service ID : " + serviceId);
+
+            // Récupérer le service
+            ServiceEntity service = serviceRepository.findById(serviceId)
+                    .orElseThrow(() -> new RuntimeException("Service non trouvé"));
+
+            // Récupérer les utilisateurs du service
+            List<Utilisateur> usersInService = utilisateurRepository.findByService(service);
+
+            // Filtrer les demandes EN_COURS
+            List<Demande> demandes = demandeRepository.findAll().stream()
+                    .filter(d -> usersInService.contains(d.getDemandeur()) &&
+                            d.getStatut() == StatutDemande.EN_COURS)
+                    .collect(Collectors.toList());
+
+            Map<String, Object> response = Map.of(
+                    "success", true,
+                    "demandes", demandes
+            );
+
+            System.out.println("✅ Nombre de demandes récupérées : " + demandes.size());
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la récupération des demandes : " + e.getMessage());
+            Map<String, Object> error = Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            );
+            return ResponseEntity.badRequest().body(error);
+        }
+    }
+
+    @PutMapping("/demandes/{id}/approve")
+    public ResponseEntity<?> approveDemande(@PathVariable Long id, Authentication authentication) {
+        try {
+            // Récupérer l'utilisateur connecté
+            String email = authentication.getName();
+            Utilisateur validateur = utilisateurRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+            // Utiliser le ValidationService pour créer l'enregistrement de validation
+            validationService.validerDemande(id, validateur.getId_utilisateur(), "Manager N+1", true, "Approuvé par le manager N+1");
+            
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Demande approuvée avec succès"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    @PutMapping("/demandes/{id}/reject")
+    public ResponseEntity<?> rejectDemande(@PathVariable Long id, Authentication authentication) {
+        try {
+            // Récupérer l'utilisateur connecté
+            String email = authentication.getName();
+            Utilisateur validateur = utilisateurRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+            // Utiliser le ValidationService pour créer l'enregistrement de validation
+            validationService.validerDemande(id, validateur.getId_utilisateur(), "Manager N+1", false, "Refusé par le manager N+1");
+            
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Demande refusée avec succès"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+
+
+
+    @GetMapping("/demandes/manager/demandes")
+    public ResponseEntity<?> getDemandesPourManager(Authentication authentication) {
+        try {
+            // Récupérer l'utilisateur connecté
+            String email = authentication.getName();
+            Utilisateur manager = utilisateurRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+            // Vérifier que c'est bien un manager N+1
+            if (!"Manager N+1".equals(manager.getRole().getNom())) {
+                return ResponseEntity.status(403).body(Map.of(
+                        "success", false,
+                        "message", "Accès refusé : vous n'êtes pas un manager N+1"
+                ));
+            }
+
+            Long serviceId = manager.getService().getId_service();
+
+            // Récupérer les demandes en cours pour ce service
+            List<Demande> demandes = demandeRepository.findAll().stream()
+                    .filter(d -> d.getService().getId_service().equals(serviceId))
+                    .filter(d -> d.getStatut() == StatutDemande.EN_COURS)
+                    .collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "demandes", demandes
+            ));
+
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    @GetMapping("/demandes/mes-demandes-service")
+    public ResponseEntity<?> getDemandesPourMonService(Authentication authentication) {
+        try {
+            System.out.println("🔄 Récupération des demandes pour le service de l'utilisateur: " + authentication.getName());
+
+            // Récupérer l'utilisateur connecté
+            String email = authentication.getName();
+            Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+            // Récupérer le service de l'utilisateur connecté
+            ServiceEntity serviceUtilisateur = utilisateur.getService();
+            if (serviceUtilisateur == null) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "success", false,
+                        "message", "Aucun service associé à cet utilisateur"
+                ));
+            }
+
+            System.out.println("🔍 Service de l'utilisateur: " + serviceUtilisateur.getNom());
+
+            // ✅ Filtrer sur le service du demandeur, toutes les demandes (pas seulement EN_COURS)
+            List<Demande> demandes = demandeRepository.findAll().stream()
+                    .filter(d -> d.getDemandeur() != null &&
+                            d.getDemandeur().getService() != null &&
+                            d.getDemandeur().getService().getId_service()
+                                    .equals(serviceUtilisateur.getId_service()))
+                    .collect(Collectors.toList());
+
+            System.out.println("✅ Nombre de demandes EN_COURS trouvées: " + demandes.size());
+
+            Map<String, Object> response = Map.of(
+                    "success", true,
+                    "demandes", demandes
+            );
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la récupération des demandes: " + e.getMessage());
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    // ===================== Support IT =====================
+    @GetMapping("/demandes/support-it")
+    public ResponseEntity<?> getDemandesPourSupportIT() {
+        try {
+            System.out.println("🔄 Récupération des demandes pour Support IT");
+            
+            // Debug: vérifier d'abord toutes les demandes
+            List<Demande> toutesDemandes = demandeRepository.findAll();
+            System.out.println("📊 Total des demandes en base: " + toutesDemandes.size());
+            
+            // Debug: vérifier les validations existantes
+            List<Demande> demandes = demandeRepository.findDemandesPourSupportIT();
+            
+            System.out.println("✅ Nombre de demandes trouvées pour Support IT: " + demandes.size());
+            
+            // Debug: afficher les détails des demandes trouvées
+            if (demandes.size() > 0) {
+                demandes.forEach(d -> {
+                    System.out.println("🔍 Demande ID: " + d.getId_demande() + 
+                                     ", Statut: " + d.getStatut() + 
+                                     ", Demandeur: " + (d.getDemandeur() != null ? d.getDemandeur().getEmail() : "null") +
+                                     ", Service: " + (d.getDemandeur() != null && d.getDemandeur().getService() != null ? d.getDemandeur().getService().getNom() : "null"));
+                });
+            }
+            
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "demandes", demandes
+            ));
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la récupération des demandes Support IT: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
 }

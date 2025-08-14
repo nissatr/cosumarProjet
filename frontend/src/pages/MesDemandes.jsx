@@ -9,6 +9,7 @@ const MesDemandes = () => {
     const [statutFilter, setStatutFilter] = useState("");
     const [typeFilter, setTypeFilter] = useState("");
     const [urgenceFilter, setUrgenceFilter] = useState("");
+    const [previousDemandes, setPreviousDemandes] = useState([]);
 
 
     useEffect(() => {
@@ -27,14 +28,45 @@ const MesDemandes = () => {
                 console.log("Première demande:", data[0]);
                 console.log("TypeDemande de la première demande:", data[0].typeDemande);
             }
+            
+            let newDemandes = [];
             // S'assurer que data est un tableau
             if (data && Array.isArray(data)) {
-                setDemandes(data);
+                newDemandes = data;
             } else if (data && data.demandes && Array.isArray(data.demandes)) {
-                setDemandes(data.demandes);
-            } else {
-                setDemandes([]);
+                newDemandes = data.demandes;
             }
+            
+            // Vérifier les changements de statut et notifier
+            if (previousDemandes.length > 0) {
+                newDemandes.forEach(newDemande => {
+                    const oldDemande = previousDemandes.find(d => d.id_demande === newDemande.id_demande);
+                    if (oldDemande && oldDemande.statut !== newDemande.statut) {
+                        // Notification de changement de statut
+                        const statusMessages = {
+                            'ACCEPTEE': '✅ Votre demande a été acceptée !',
+                            'REFUSEE': '❌ Votre demande a été refusée.',
+                            'EN_COURS': '🔄 Votre demande est en cours de traitement.',
+                            'ANNULEE': '🚫 Votre demande a été annulée.'
+                        };
+                        
+                        const message = statusMessages[newDemande.statut] || `📊 Le statut de votre demande a changé vers: ${newDemande.statut}`;
+                        
+                        toast.info(message, {
+                            position: "top-right",
+                            autoClose: 7000,
+                            hideProgressBar: false,
+                            closeOnClick: true,
+                            pauseOnHover: true,
+                            draggable: true,
+                        });
+                    }
+                });
+            }
+            
+            setDemandes(newDemandes);
+            setPreviousDemandes(newDemandes);
+            
         } catch (err) {
             console.error("Erreur fetchDemandes:", err); // Debug
             toast.error("Erreur de chargement des demandes");
@@ -48,10 +80,20 @@ const MesDemandes = () => {
         if (!window.confirm("Voulez-vous annuler cette demande ?")) return;
         try {
             await demandeService.annulerDemande(id);
-            toast.success("Demande annulée avec succès !");
+            toast.success("✅ Demande annulée avec succès !", {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+            });
             fetchDemandes(); // Rafraîchit la liste
         } catch {
-            toast.error("Impossible d'annuler la demande.");
+            toast.error("❌ Impossible d'annuler la demande.", {
+                position: "top-right",
+                autoClose: 5000,
+            });
         }
     };
 
@@ -59,10 +101,20 @@ const MesDemandes = () => {
         if (!window.confirm("Voulez-vous supprimer cette demande ?")) return;
         try {
             await demandeService.supprimerDemande(id);
-            toast.success("Demande supprimée avec succès !");
+            toast.success("🗑️ Demande supprimée avec succès !", {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+            });
             fetchDemandes(); // Rafraîchit la liste
         } catch {
-            toast.error("Impossible de supprimer la demande.");
+            toast.error("❌ Impossible de supprimer la demande.", {
+                position: "top-right",
+                autoClose: 5000,
+            });
         }
     };
 

@@ -1,13 +1,55 @@
 package com.cosmarProject.cosumarProject.services;
 
+import com.cosmarProject.cosumarProject.model.Demande;
+import com.cosmarProject.cosumarProject.model.StatutDemande;
+import com.cosmarProject.cosumarProject.model.Utilisateur;
+import com.cosmarProject.cosumarProject.model.Validation;
+import com.cosmarProject.cosumarProject.repository.DemandeRepository;
+import com.cosmarProject.cosumarProject.repository.UtilisateurRepository;
 import com.cosmarProject.cosumarProject.repository.ValidationRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-@Service
-public class ValidationService {
-    private final ValidationRepository validationRepository;
+import java.time.LocalDateTime;
 
-    public ValidationService(ValidationRepository validationRepository) {
-        this.validationRepository = validationRepository;
+@Service
+@RequiredArgsConstructor
+public class ValidationService {
+
+    private final DemandeRepository demandeRepository;
+    private final ValidationRepository validationRepository;
+    private final UtilisateurRepository utilisateurRepository;
+
+    public void validerDemande(Long demandeId, Long validateurId, String niveau, boolean accepte, String commentaire) {
+        Demande demande = demandeRepository.findById(demandeId)
+                .orElseThrow(() -> new RuntimeException("Demande non trouvée"));
+        Utilisateur validateur = utilisateurRepository.findById(validateurId)
+                .orElseThrow(() -> new RuntimeException("Validateur non trouvé"));
+
+        Validation validation = Validation.builder()
+                .demande(demande)
+                .validateur(validateur)
+                .niveau(niveau)
+                .statutValidation(accepte ? "ACCEPTEE" : "REFUSEE")
+                .commentaire(commentaire)
+                .dateValidation(LocalDateTime.now())
+                .build();
+
+        validationRepository.save(validation);
+
+        // Si un niveau refuse, on passe la demande en REFUSEE immédiatement
+        if (!accepte) {
+            demande.setStatut(StatutDemande.REFUSEE);
+            demandeRepository.save(demande);
+            return;
+        }
+
+        // La demande reste EN_COURS pour les niveaux intermédiaires (Manager N+1, Support IT, SI)
+        // Elle ne devient ACCEPTEE qu'à la dernière étape: Administration
+        if ("Administration".equals(niveau)) {
+            demande.setStatut(StatutDemande.ACCEPTEE);
+            demandeRepository.save(demande);
+        }
     }
 }
+

@@ -11,6 +11,7 @@ import NouvelleDemande from "./pages/NouvelleDemande.jsx";
 import AdminPanel from "./pages/AdminPanel.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import MesDemandes from "./pages/MesDemandes.jsx";
+import Validation from "./pages/Validation.jsx";
 
 const App = () => {
   return (
@@ -43,6 +44,12 @@ const App = () => {
               <MesDemandes />
             </ProtectedRoute>
           }></Route>
+          <Route path="/validation" element={
+            <ProtectedRoute>
+              <Validation/>
+            </ProtectedRoute>
+          }></Route>
+
 
         </Routes>
       </div>

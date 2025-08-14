@@ -2,6 +2,7 @@ package com.cosmarProject.cosumarProject.services;
 
 import com.cosmarProject.cosumarProject.model.Demande;
 import com.cosmarProject.cosumarProject.repository.DemandeRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
@@ -10,12 +11,9 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class DemandeService {
     private final DemandeRepository demandeRepository;
-
-    public DemandeService(DemandeRepository demandeRepository) {
-        this.demandeRepository = demandeRepository;
-    }
 
     public List<Map<String, Object>> getAllDemandesForAdmin() {
         try {
@@ -48,6 +46,23 @@ public class DemandeService {
         } catch (Exception e) {
             System.out.println("❌ Erreur lors de la récupération des demandes: " + e.getMessage());
             throw new RuntimeException("Erreur lors de la récupération des demandes: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Créer une nouvelle demande
+     */
+    public Demande creerDemande(Demande demande) {
+        try {
+            // Sauvegarder la demande
+            Demande demandeSauvegardee = demandeRepository.save(demande);
+            
+            System.out.println("✅ Demande créée: " + demandeSauvegardee.getId_demande());
+            return demandeSauvegardee;
+            
+        } catch (Exception e) {
+            System.err.println("❌ Erreur lors de la création de la demande: " + e.getMessage());
+            throw new RuntimeException("Erreur lors de la création de la demande: " + e.getMessage());
         }
     }
 }
