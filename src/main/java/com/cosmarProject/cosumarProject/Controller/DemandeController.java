@@ -21,9 +21,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import com.cosmarProject.cosumarProject.model.Validation;
 import com.cosmarProject.cosumarProject.repository.ValidationRepository;
+import com.cosmarProject.cosumarProject.repository.RapportITRepository;
 
 @RequiredArgsConstructor
-@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"}, allowCredentials = "true")
 @RestController
 public class DemandeController {
     private final DemandeService demandeService;
@@ -32,6 +33,7 @@ public class DemandeController {
     private final DemandeRepository demandeRepository;
     private final ValidationService validationService;
     private final ValidationRepository validationRepository;
+    private final RapportITRepository rapportITRepository;
 
 
     @GetMapping("/admin/demandes")
@@ -343,8 +345,8 @@ public class DemandeController {
             List<Demande> demandes;
 
             if ("Support IT".equals(roleUtilisateur)) {
-                // Pour Support IT : afficher seulement les demandes approuvées par les managers
-                System.out.println("🔧 Support IT détecté - Affichage des demandes approuvées par les managers");
+                // Pour Support IT : afficher TOUTES les demandes approuvées par les managers
+                System.out.println("🔧 Support IT détecté - Affichage de toutes les demandes approuvées par les managers");
                 demandes = demandeRepository.findAll().stream()
                         .filter(d -> d.getApprovedByManager() != null && d.getApprovedByManager())
                         .collect(Collectors.toList());
@@ -486,6 +488,14 @@ public class DemandeController {
                             demandeInfo.put("validationExistante", null);
                         }
                         
+                        // Vérifier si un rapport IT existe déjà pour cette demande
+                        boolean rapportITExiste = rapportITRepository.findLatestByDemandeId(d.getId_demande()).isPresent();
+                        demandeInfo.put("rapportITExiste", rapportITExiste);
+                        
+                        // Vérifier si cette demande a déjà une validation Support IT
+                        boolean validationSupportITExiste = validationRepository.existsByDemandeAndNiveau(d, "Support IT");
+                        demandeInfo.put("validationSupportITExiste", validationSupportITExiste);
+                        
                         return demandeInfo;
                     })
                     .collect(Collectors.toList());
@@ -532,8 +542,9 @@ public class DemandeController {
             List<Demande> demandesAlternative = demandeRepository.findDemandesValideesParManagerN1();
             System.out.println("✅ Nombre de demandes trouvées pour Support IT (méthode alternative): " + demandesAlternative.size());
             
-            // Utiliser la méthode qui donne le plus de résultats
-            List<Demande> demandesFinales = demandesAlternative.size() > demandes.size() ? demandesAlternative : demandes;
+            // Pour Support IT : afficher TOUTES les demandes approuvées par les managers (même celles avec rapport déjà fait)
+            List<Demande> demandesFinales = demandeRepository.findDemandesValideesParManagerN1();
+            System.out.println("✅ Nombre total de demandes approuvées par managers: " + demandesFinales.size());
             System.out.println("✅ Nombre final de demandes pour Support IT: " + demandesFinales.size());
             
             // Debug: afficher les détails des demandes trouvées
@@ -556,9 +567,56 @@ public class DemandeController {
                 });
             }
             
+            // Transformer les demandes pour ajouter les informations sur les rapports IT
+            List<Map<String, Object>> demandesAvecRapportIT = demandesFinales.stream()
+                .map(d -> {
+                    Map<String, Object> demandeInfo = new HashMap<>();
+                    
+                    // Ajouter toutes les propriétés de la demande
+                    demandeInfo.put("id_demande", d.getId_demande());
+                    demandeInfo.put("description", d.getDescription());
+                    demandeInfo.put("statut", d.getStatut());
+                    demandeInfo.put("urgence", d.getUrgence());
+                    demandeInfo.put("dateCreation", d.getDateCreation());
+                    demandeInfo.put("commentaireAutres", d.getCommentaireAutres());
+                    
+                    // Ajouter le demandeur
+                    if (d.getDemandeur() != null) {
+                        Map<String, Object> demandeurInfo = new HashMap<>();
+                        demandeurInfo.put("id_utilisateur", d.getDemandeur().getId_utilisateur());
+                        demandeurInfo.put("nom", d.getDemandeur().getNom());
+                        demandeurInfo.put("prenom", d.getDemandeur().getPrenom());
+                        demandeurInfo.put("email", d.getDemandeur().getEmail());
+                        if (d.getDemandeur().getService() != null) {
+                            Map<String, Object> serviceInfo = new HashMap<>();
+                            serviceInfo.put("id_service", d.getDemandeur().getService().getId_service());
+                            serviceInfo.put("nom", d.getDemandeur().getService().getNom());
+                            demandeurInfo.put("service", serviceInfo);
+                        }
+                        demandeInfo.put("demandeur", demandeurInfo);
+                    }
+                    
+                    // Ajouter le type de demande
+                    if (d.getTypeDemande() != null) {
+                        Map<String, Object> typeInfo = new HashMap<>();
+                        typeInfo.put("id_type", d.getTypeDemande().getId_Type());
+                        typeInfo.put("nomType", d.getTypeDemande().getNomType());
+                        typeInfo.put("detailType", d.getTypeDemande().getDetailType());
+                        typeInfo.put("aDetailType", d.getTypeDemande().getADetailType());
+                        demandeInfo.put("typeDemande", typeInfo);
+                    }
+                    
+                    // Vérifier si un rapport IT existe déjà pour cette demande
+                    boolean rapportITExiste = rapportITRepository.findLatestByDemandeId(d.getId_demande()).isPresent();
+                    demandeInfo.put("rapportITExiste", rapportITExiste);
+                    
+                    return demandeInfo;
+                })
+                .collect(Collectors.toList());
+            
             return ResponseEntity.ok(Map.of(
                 "success", true,
-                "demandes", demandesFinales
+                "demandes", demandesAvecRapportIT
             ));
         } catch (Exception e) {
             System.out.println("❌ Erreur lors de la récupération des demandes Support IT: " + e.getMessage());

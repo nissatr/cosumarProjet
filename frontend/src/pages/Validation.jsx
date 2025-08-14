@@ -14,6 +14,7 @@ const Validation = () => {
     const [previousDemandes, setPreviousDemandes] = useState([]);
     const [isSupportIT, setIsSupportIT] = useState(false);
     const [isManagerN1, setIsManagerN1] = useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
     const [rapportFile, setRapportFile] = useState(null);
     const [rapportComment, setRapportComment] = useState("");
     const [n1Decision, setN1Decision] = useState({}); // id_demande -> 'ACCEPTEE' | 'REFUSEE'
@@ -21,13 +22,14 @@ const Validation = () => {
     // Récupérer les demandes du service de l'utilisateur connecté
     const fetchDemandes = async () => {
         setLoading(true);
+        setIsRefreshing(true);
         try {
             console.log("🔍 fetchDemandes - Rôle détecté:", { isSupportIT, isManagerN1 });
             
             let data;
             if (isSupportIT) {
                 console.log("🔄 Récupération des demandes pour Support IT...");
-                data = await demandeService.getDemandesSupportIT();
+                data = await demandeService.getMesDemandesService();
                 console.log("📊 Données Support IT reçues:", data);
             } else {
                 console.log("🔄 Récupération des demandes du service...");
@@ -95,6 +97,7 @@ const Validation = () => {
             toast.error("Erreur lors de la récupération des demandes");
         } finally {
             setLoading(false);
+            setIsRefreshing(false);
         }
     };
 
@@ -204,6 +207,8 @@ const Validation = () => {
             }
         };
         init();
+        
+        // Pas d'actualisation automatique périodique
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -218,23 +223,17 @@ const Validation = () => {
             setRapportFile(null);
             setRapportComment("");
             setShowDetailModal(false);
+            
+            // Actualisation après soumission du rapport
             await fetchDemandes();
+            
         } catch (e) {
             console.error(e);
             toast.error("❌ Erreur lors de la soumission du rapport", { position: "top-right" });
         }
     };
 
-    const handleDebugSupportIT = async () => {
-        try {
-            const response = await demandeService.debugSupportIT();
-            console.log("Debug Support IT Response:", response);
-            toast.success("Debug Support IT terminé avec succès!", { position: "top-right" });
-        } catch (error) {
-            console.error("Erreur lors du debug Support IT:", error);
-            toast.error("❌ Erreur lors du debug Support IT", { position: "top-right" });
-        }
-    };
+
 
     return (
         <div className="d-flex" style={{ height: "100vh", backgroundColor: "#f8f9fa" }}>
@@ -255,15 +254,7 @@ const Validation = () => {
                                 }
                             </small>
                         </div>
-                        {isSupportIT && (
-                            <button 
-                                className="btn btn-outline-light btn-sm ms-auto"
-                                onClick={handleDebugSupportIT}
-                                title="Debug Support IT"
-                            >
-                                🔍 Debug
-                            </button>
-                        )}
+
                     </div>
 
                     {/* FILTRES */}
@@ -400,7 +391,11 @@ const Validation = () => {
                                                     ) : d.statut === "ACCEPTEE" ? (
                                                         <span className="badge bg-success">✅ Approuvée</span>
                                                     ) : d.statut === "EN_COURS" ? (
-                                                        <span className="badge bg-primary">En cours</span>
+                                                        isSupportIT && d.validationSupportITExiste ? (
+                                                            <span className="badge bg-success">✅ Rapport soumis</span>
+                                                        ) : (
+                                                            <span className="badge bg-primary">En cours</span>
+                                                        )
                                                     ) : (
                                                         <span className="badge bg-primary">En cours</span>
                                                     )}
@@ -411,6 +406,7 @@ const Validation = () => {
                                                             className="btn btn-outline-info btn-sm"
                                                             onClick={() => handleShowDetail(d)}
                                                             title="Voir les détails"
+                                                            disabled={isSupportIT && d.rapportITExiste}
                                                         >
                                                             📋 Voir
                                                         </button>
@@ -440,6 +436,11 @@ const Validation = () => {
                                                                 ) : (
                                                                     <>✅ Déjà validée</>
                                                                 )}
+                                                            </span>
+                                                        )}
+                                                        {isSupportIT && d.validationSupportITExiste && (
+                                                            <span className="text-muted small">
+                                                                📋 Déjà fait rapport
                                                             </span>
                                                         )}
                                                     </div>
@@ -583,10 +584,15 @@ const Validation = () => {
                                         </button>
                                     </>
                                 )}
-                                {isSupportIT && (
+                                {isSupportIT && !selectedDemande.validationSupportITExiste && (
                                     <button type="button" className="btn btn-primary" onClick={handleSubmitRapport} disabled={!rapportFile && !rapportComment}>
                                         Soumettre le rapport
                                     </button>
+                                )}
+                                {isSupportIT && selectedDemande.validationSupportITExiste && (
+                                    <span className="text-muted">
+                                        📋 Rapport déjà soumis
+                                    </span>
                                 )}
                             </div>
                         </div>
