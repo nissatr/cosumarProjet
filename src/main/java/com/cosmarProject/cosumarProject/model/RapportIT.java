@@ -20,6 +20,8 @@ public class RapportIT {
     private Long id_rapport_it;
     private LocalDateTime dateRapport;
     private String commentaire;
+    private String nomFichier; // Nom original du fichier uploadé
+    private String nomFichierUnique; // Nom unique du fichier stocké
 
     @ManyToOne
     @JoinColumn(name = "id_support_it")

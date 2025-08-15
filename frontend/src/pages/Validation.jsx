@@ -233,6 +233,36 @@ const Validation = () => {
         }
     };
 
+    const handleDownloadRapport = async (demandeId) => {
+        try {
+            const response = await fetch(`http://localhost:8089/api/v1.0/demandes/${demandeId}/rapport-it/download`, {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/pdf,application/octet-stream,*/*'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error('Fichier non trouvé');
+            }
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = selectedDemande.rapportIT?.nomFichier || 'rapport-it.pdf';
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+            
+            toast.success("📥 Fichier téléchargé", { position: "top-right" });
+        } catch (e) {
+            console.error(e);
+            toast.error("❌ Erreur lors du téléchargement", { position: "top-right" });
+        }
+    };
+
 
 
     return (
@@ -311,7 +341,7 @@ const Validation = () => {
                                         <th>Description</th>
                                         <th>Urgence</th>
                                         <th>Date création</th>
-                                        <th>Statut</th>
+                                        {!isSupportIT && <th>Statut</th>}
                                         <th>Actions</th>
                                     </tr>
                                     </thead>
@@ -361,52 +391,49 @@ const Validation = () => {
                                                         {d.dateCreation ? new Date(d.dateCreation).toLocaleDateString('fr-FR') : "N/A"}
                                                     </small>
                                                 </td>
-                                                <td>
-                                                    {d.dejaValidee ? (
-                                                        <div>
-                                                            {d.validationExistante && d.validationExistante.statut === 'REFUSEE' ? (
-                                                                <>
-                                                                    <span className="badge bg-danger">❌ Refusée</span>
-                                                                    <br />
-                                                                    <small className="text-muted">
-                                                                        Refusée le {new Date(d.validationExistante.dateValidation).toLocaleDateString('fr-FR')}
-                                                                    </small>
-                                                                </>
-                                                            ) : (
-                                                                <>
-                                                                    <span className="badge bg-success">✅ Approuvée</span>
-                                                                    <br />
-                                                                    <small className="text-muted">
-                                                                        Approuvée le {new Date(d.validationExistante.dateValidation).toLocaleDateString('fr-FR')}
-                                                                    </small>
-                                                                </>
-                                                            )}
-                                                        </div>
-                                                    ) : n1Decision[d.id_demande] === 'ACCEPTEE' ? (
-                                                        <span className="badge bg-success">✅ Approuvée</span>
-                                                    ) : n1Decision[d.id_demande] === 'REFUSEE' ? (
-                                                        <span className="badge bg-danger">❌ Refusée</span>
-                                                    ) : d.statut === "REFUSEE" ? (
-                                                        <span className="badge bg-danger">❌ Refusée</span>
-                                                    ) : d.statut === "ACCEPTEE" ? (
-                                                        <span className="badge bg-success">✅ Approuvée</span>
-                                                    ) : d.statut === "EN_COURS" ? (
-                                                        isSupportIT && d.validationSupportITExiste ? (
-                                                            <span className="badge bg-success">✅ Rapport soumis</span>
+                                                {!isSupportIT && (
+                                                    <td>
+                                                        {d.dejaValidee ? (
+                                                            <div>
+                                                                {d.validationExistante && d.validationExistante.statut === 'REFUSEE' ? (
+                                                                    <>
+                                                                        <span className="badge bg-danger">❌ Refusée</span>
+                                                                        <br />
+                                                                        <small className="text-muted">
+                                                                            Refusée le {new Date(d.validationExistante.dateValidation).toLocaleDateString('fr-FR')}
+                                                                        </small>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <span className="badge bg-success">✅ Approuvée</span>
+                                                                        <br />
+                                                                        <small className="text-muted">
+                                                                            Approuvée le {new Date(d.validationExistante.dateValidation).toLocaleDateString('fr-FR')}
+                                                                        </small>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        ) : n1Decision[d.id_demande] === 'ACCEPTEE' ? (
+                                                            <span className="badge bg-success">✅ Approuvée</span>
+                                                        ) : n1Decision[d.id_demande] === 'REFUSEE' ? (
+                                                            <span className="badge bg-danger">❌ Refusée</span>
+                                                        ) : d.statut === "REFUSEE" ? (
+                                                            <span className="badge bg-danger">❌ Refusée</span>
+                                                        ) : d.statut === "ACCEPTEE" ? (
+                                                            <span className="badge bg-success">✅ Approuvée</span>
+                                                        ) : d.statut === "EN_COURS" ? (
+                                                            <span className="badge bg-primary">En cours</span>
                                                         ) : (
                                                             <span className="badge bg-primary">En cours</span>
-                                                        )
-                                                    ) : (
-                                                        <span className="badge bg-primary">En cours</span>
-                                                    )}
-                                                </td>
+                                                        )}
+                                                    </td>
+                                                )}
                                                 <td>
                                                     <div className="d-flex gap-2">
                                                         <button
                                                             className="btn btn-outline-info btn-sm"
                                                             onClick={() => handleShowDetail(d)}
                                                             title="Voir les détails"
-                                                            disabled={isSupportIT && d.rapportITExiste}
                                                         >
                                                             📋 Voir
                                                         </button>
@@ -437,7 +464,7 @@ const Validation = () => {
                                                                     <>✅ Déjà validée</>
                                                                 )}
                                                             </span>
-                                                        )}
+                                                                                                                )}
                                                         {isSupportIT && d.validationSupportITExiste && (
                                                             <span className="text-muted small">
                                                                 📋 Déjà fait rapport
@@ -533,7 +560,7 @@ const Validation = () => {
                                     </div>
                                 )}
 
-                                {isSupportIT && (
+                                {isSupportIT && !selectedDemande.validationSupportITExiste && (
                                     <div className="mt-4">
                                         <h6 className="fw-bold">🧩 Rapport technique (Support IT)</h6>
                                         <div className="mb-3">
@@ -548,12 +575,29 @@ const Validation = () => {
                                 )}
 
                                 {/* Afficher le rapport existant s'il existe */}
-                                {isSupportIT && selectedDemande.rapportIT && (
+                                {isSupportIT && selectedDemande.validationSupportITExiste && (
                                     <div className="mt-4">
-                                        <h6 className="fw-bold">📋 Rapport technique existant</h6>
-                                        <div className="bg-light p-3 rounded">
-                                            <p><strong>Date du rapport:</strong> {selectedDemande.rapportIT.dateRapport ? new Date(selectedDemande.rapportIT.dateRapport).toLocaleString('fr-FR') : 'N/A'}</p>
-                                            <p><strong>Commentaire:</strong> {selectedDemande.rapportIT.commentaire || 'Aucun commentaire'}</p>
+                                        <h6 className="fw-bold">📋 Rapport technique soumis</h6>
+                                        <div className="bg-success bg-opacity-10 p-3 rounded border border-success">
+                                            <p><strong>Date du rapport:</strong> {selectedDemande.rapportIT?.dateRapport ? new Date(selectedDemande.rapportIT.dateRapport).toLocaleString('fr-FR') : 'N/A'}</p>
+                                            <p><strong>Commentaire:</strong> {selectedDemande.rapportIT?.commentaire || 'Aucun commentaire'}</p>
+                                            {selectedDemande.rapportIT?.nomFichier && (
+                                                <div>
+                                                    <p><strong>Fichier:</strong> 
+                                                        <a 
+                                                            href="#" 
+                                                            className="text-primary text-decoration-underline"
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                handleDownloadRapport(selectedDemande.id_demande);
+                                                            }}
+                                                            style={{ cursor: 'pointer' }}
+                                                        >
+                                                            📄 {selectedDemande.rapportIT.nomFichier}
+                                                        </a>
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
