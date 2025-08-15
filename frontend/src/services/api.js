@@ -156,6 +156,22 @@ export const demandeService = {
         return response.data?.demandes || [];
     },
 
+    // Demandes pour SI (tous services avec rapport IT, validées par N+1 et Support IT, non encore validées par SI)
+    getDemandesSI: async () => {
+        const response = await api.get(`/demandes/si`, {
+            params: { _t: Date.now() }
+        });
+        return response.data?.demandes || [];
+    },
+
+    // Demandes pour Administrateur (toutes les demandes approuvées par SI, en attente de validation finale)
+    getDemandesPourAdministrateur: async () => {
+        const response = await api.get(`/demandes/administrateur`, {
+            params: { _t: Date.now() }
+        });
+        return response.data?.demandes || [];
+    },
+
     getDemandesByService: async (service) => {
         const response = await api.get(`/demandes/service/${encodeURIComponent(service)}`, {
             params: { _t: Date.now() }
@@ -183,6 +199,16 @@ export const demandeService = {
         return response.data;
     },
 
+    // Validation SI
+    approveDemandeSI: async (id) => {
+        const response = await api.put(`/demandes/${id}/si/approve`);
+        return response.data;
+    },
+    rejectDemandeSI: async (id) => {
+        const response = await api.put(`/demandes/${id}/si/reject`);
+        return response.data;
+    },
+
     // Soumettre rapport IT
     submitRapportIT: async (id, { fichier, commentaire }) => {
         const formData = new FormData();
@@ -204,6 +230,12 @@ export const demandeService = {
     debugSupportIT: async () => {
         const response = await api.get('/demandes/debug-support-it');
         return response.data;
+    },
+    
+    // Récupérer les validations d'une demande spécifique
+    getValidationsForDemande: async (demandeId) => {
+        const response = await api.get(`/demandes/${demandeId}/validations`);
+        return response.data?.validations || [];
     }
 };
 

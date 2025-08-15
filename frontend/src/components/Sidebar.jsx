@@ -9,8 +9,10 @@ const Sidebar = () => {
     const [userInfo, setUserInfo] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-    const [isManager, setIsManager] = useState(false); // ✅ Manager N+1
-    const [isSupportIT, setIsSupportIT] = useState(false); // ✅ Support IT
+    const [isManager, setIsManager] = useState(false);
+    const [isSupportIT, setIsSupportIT] = useState(false);
+    const [isSI, setIsSI] = useState(false);
+    const [isAdministrateur, setIsAdministrateur] = useState(false);
 
     useEffect(() => {
         const fetchUserInfo = async () => {
@@ -20,6 +22,8 @@ const Sidebar = () => {
                 setIsSuperAdmin(info.role === 'SUPER_ADMIN');
                 setIsManager(info.role === 'Manager N+1');
                 setIsSupportIT(info.role === 'Support IT');
+                setIsSI(info.role === 'SI');
+                setIsAdministrateur(info.role === 'Administrateur');
             } catch (error) {
                 console.error("Erreur lors de la récupération des informations utilisateur:", error);
                 toast.error("Erreur lors du chargement des informations utilisateur");
@@ -32,7 +36,19 @@ const Sidebar = () => {
     }, []);
 
     const navigationItems = [
-        ...(isSuperAdmin ? [] : [
+        // Pour l'Administrateur, on affiche uniquement Validation
+        ...(isAdministrateur ? [
+            {
+                id: "validation",
+                title: "Validation",
+                icon: "✅",
+                description: "Validation finale des demandes approuvées par le SI",
+                active: location.pathname === "/validation"
+            }
+        ] : []),
+
+        // Pour les autres rôles (sauf Super Admin et Administrateur)
+        ...(!isSuperAdmin && !isAdministrateur ? [
             {
                 id: "dashboard",
                 title: "Dashboard",
@@ -47,16 +63,18 @@ const Sidebar = () => {
                 description: "Consulter et gérer mes demandes",
                 active: location.pathname === "/mes-demandes"
             },
-            // ✅ Ajout de l'onglet Validation si Manager N+1 ou Support IT
-            ...((isManager || isSupportIT) ? [{
+            ...((isManager || isSupportIT || isSI) ? [{
                 id: "validation",
                 title: "Validation",
                 icon: "✅",
-                description: isSupportIT ? "Traiter les demandes (tous services)" : "Valider ou refuser les demandes de votre service",
+                description: isSupportIT
+                    ? "Traiter les demandes (tous services)"
+                    : (isManager ? "Valider ou refuser les demandes de votre service"
+                        : (isSI ? "Valider les demandes avec rapport du Support IT"
+                            : "Validation des demandes")),
                 active: location.pathname === "/validation"
             }] : [])
-        ]),
-
+        ] : [])
     ];
 
     const handleLogout = async () => {
@@ -86,8 +104,8 @@ const Sidebar = () => {
                 <div className="fs-7 opacity-75">Système de demandes</div>
             </div>
 
-            {/* Section Créer une nouvelle demande */}
-            {!isSuperAdmin && (
+            {/* Section Créer une nouvelle demande - Masquée pour l'Administrateur */}
+            {!isSuperAdmin && !isAdministrateur && (
                 <div className="p-3 border-bottom">
                     <div
                         className="d-flex align-items-center p-3 rounded-3 cursor-pointer text-primary hover-bg-light"
@@ -108,36 +126,38 @@ const Sidebar = () => {
 
             {/* Navigation */}
             <div className="flex-grow-1 p-3" style={{ overflowY: "auto" }}>
-                <div className="mb-4">
-                    <h6 className="text-uppercase fw-bold text-muted mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
-                        NAVIGATION
-                    </h6>
-                    {navigationItems.map((item) => (
-                        <div
-                            key={item.id}
-                            className={`d-flex align-items-center p-3 rounded-3 mb-2 cursor-pointer ${
-                                item.active ? 'bg-primary text-white' : 'text-muted hover-bg-light'
-                            }`}
-                            style={{ transition: "all 0.2s ease" }}
-                            onClick={() => navigate(`/${item.id}`)} // ✅ dirige vers Validation.js si id="validation"
-                        >
-                            <div className="me-3" style={{ fontSize: "1.2rem" }}>{item.icon}</div>
-                            <div className="flex-grow-1">
-                                <div className="d-flex align-items-center justify-content-between">
-                                    <span className="fw-medium">{item.title}</span>
-                                    {item.badge && (
-                                        <span className="badge bg-danger rounded-circle" style={{ fontSize: "0.7rem" }}>
-                                            {item.badge}
-                                        </span>
-                                    )}
+                {navigationItems.length > 0 && (
+                    <div className="mb-4">
+                        <h6 className="text-uppercase fw-bold text-muted mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>
+                            {isAdministrateur ? "VALIDATION" : "NAVIGATION"}
+                        </h6>
+                        {navigationItems.map((item) => (
+                            <div
+                                key={item.id}
+                                className={`d-flex align-items-center p-3 rounded-3 mb-2 cursor-pointer ${
+                                    item.active ? 'bg-primary text-white' : 'text-muted hover-bg-light'
+                                }`}
+                                style={{ transition: "all 0.2s ease" }}
+                                onClick={() => navigate(`/${item.id}`)}
+                            >
+                                <div className="me-3" style={{ fontSize: "1.2rem" }}>{item.icon}</div>
+                                <div className="flex-grow-1">
+                                    <div className="d-flex align-items-center justify-content-between">
+                                        <span className="fw-medium">{item.title}</span>
+                                        {item.badge && (
+                                            <span className="badge bg-danger rounded-circle" style={{ fontSize: "0.7rem" }}>
+                                                {item.badge}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="fs-7 opacity-75 mt-1">{item.description}</div>
                                 </div>
-                                <div className="fs-7 opacity-75 mt-1">{item.description}</div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
 
-                {/* Administration */}
+                {/* Administration - Masquée pour l'Administrateur */}
                 {isSuperAdmin && (
                     <div className="mb-4">
                         <h6 className="text-uppercase fw-bold text-muted mb-3" style={{ fontSize: "0.75rem", letterSpacing: "0.5px" }}>

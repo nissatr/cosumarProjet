@@ -49,6 +49,15 @@ const Login = () => {
             if (formData.password.length < 6) {
                 toast.error("Le mot de passe doit contenir au moins 6 caractères");
                 return;
+            } else if (response.success) {
+                toast.success("Connexion réussie !");
+                // Récupérer le rôle de l'utilisateur depuis la réponse
+                const userRole = response.user?.role;
+                if (userRole === 'Administrateur') {
+                    navigate("/validation");
+                } else {
+                    navigate("/dashboard");
+                }
             }
 
             setIsSubmitting(true);

@@ -14,6 +14,7 @@ const Validation = () => {
     const [previousDemandes, setPreviousDemandes] = useState([]);
     const [isSupportIT, setIsSupportIT] = useState(false);
     const [isManagerN1, setIsManagerN1] = useState(false);
+    const [isAdministrateur, setIsAdministrateur] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [rapportFile, setRapportFile] = useState(null);
     const [rapportComment, setRapportComment] = useState("");
@@ -24,13 +25,17 @@ const Validation = () => {
         setLoading(true);
         setIsRefreshing(true);
         try {
-            console.log("🔍 fetchDemandes - Rôle détecté:", { isSupportIT, isManagerN1 });
+            console.log("🔍 fetchDemandes - Rôle détecté:", { isSupportIT, isManagerN1, isAdministrateur });
             
             let data;
             if (isSupportIT) {
                 console.log("🔄 Récupération des demandes pour Support IT...");
                 data = await demandeService.getMesDemandesService();
                 console.log("📊 Données Support IT reçues:", data);
+            } else if (isAdministrateur) {
+                console.log("🔄 Récupération des demandes pour Administrateur...");
+                data = await demandeService.getDemandesPourAdministrateur();
+                console.log("📊 Données Administrateur reçues:", data);
             } else {
                 console.log("🔄 Récupération des demandes du service...");
                 data = await demandeService.getMesDemandesService();
@@ -189,11 +194,13 @@ const Validation = () => {
                 const role = info?.role || "";
                 const isSupport = role === "Support IT";
                 const isManager = role === "Manager N+1";
+                const isAdmin = role === "Administrateur";
                 
-                console.log("🎭 Rôles détectés:", { role, isSupport, isManager });
+                console.log("🎭 Rôles détectés:", { role, isSupport, isManager, isAdmin });
                 
                 setIsSupportIT(isSupport);
                 setIsManagerN1(isManager);
+                setIsAdministrateur(isAdmin);
                 
                 // Réinitialiser les filtres
                 setServiceFilter("");
@@ -263,6 +270,57 @@ const Validation = () => {
         }
     };
 
+    // Méthodes de gestion pour l'Administrateur
+    const handleApproveFinal = async (id) => {
+        try {
+            // Pour l'instant, on utilise la méthode existante
+            // TODO: Implémenter la méthode spécifique pour l'administrateur
+            await demandeService.approveDemande(id);
+            
+            toast.success("✅ Demande approuvée définitivement par l'Administration", {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+            });
+            
+            await fetchDemandes();
+        } catch (error) {
+            console.error("Erreur approve final:", error);
+            toast.error("❌ Erreur lors de l'approbation définitive", {
+                position: "top-right",
+                autoClose: 5000,
+            });
+        }
+    };
+
+    const handleRejectFinal = async (id) => {
+        try {
+            // Pour l'instant, on utilise la méthode existante
+            // TODO: Implémenter la méthode spécifique pour l'administrateur
+            await demandeService.rejectDemande(id);
+            
+            toast.success("❌ Demande refusée définitivement par l'Administration", {
+                position: "top-right",
+                autoClose: 5000,
+                hideProgressBar: false,
+                closeOnClick: true,
+                pauseOnHover: true,
+                draggable: true,
+            });
+            
+            await fetchDemandes();
+        } catch (error) {
+            console.error("Erreur reject final:", error);
+            toast.error("❌ Erreur lors du refus définitif", {
+                position: "top-right",
+                autoClose: 5000,
+            });
+        }
+    };
+
 
 
     return (
@@ -275,11 +333,15 @@ const Validation = () => {
                         <span style={{ fontSize: "2rem" }}>✅</span>
                         <div>
                             <h2 className="fw-bold mb-0">
-                                {isSupportIT ? "Traitement Support IT" : "Validation des demandes"}
+                                {isSupportIT ? "Traitement Support IT" : 
+                                 isAdministrateur ? "Validation Finale - Administration" : 
+                                 "Validation des demandes"}
                             </h2>
                             <small>
                                 {isSupportIT 
                                     ? "Traitez les demandes approuvées par les managers N+1 de tous services"
+                                    : isAdministrateur
+                                    ? "Validation finale des demandes approuvées par le SI - Décision définitive"
                                     : "Visualisez et gérez les demandes de votre service"
                                 }
                             </small>
@@ -289,7 +351,7 @@ const Validation = () => {
 
                     {/* FILTRES */}
                     <div className="bg-white rounded-3 shadow-sm p-3 mb-4 d-flex gap-3 flex-wrap">
-                        {isSupportIT && (
+                        {(isSupportIT || isAdministrateur) && (
                             <select className="form-select w-auto" value={serviceFilter} onChange={e => setServiceFilter(e.target.value)}>
                                 <option value="">Tous les services</option>
                                 <option value="Informatique">Informatique</option>
@@ -336,7 +398,7 @@ const Validation = () => {
                                     <thead className="table-light">
                                     <tr>
                                         <th>Demandeur</th>
-                                        {isSupportIT && <th>Service</th>}
+                                        {(isSupportIT || isAdministrateur) && <th>Service</th>}
                                         <th>Type</th>
                                         <th>Description</th>
                                         <th>Urgence</th>
@@ -359,7 +421,7 @@ const Validation = () => {
                                                         <small className="text-muted">{d.demandeur?.email}</small>
                                                     </div>
                                                 </td>
-                                                {isSupportIT && (
+                                                {(isSupportIT || isAdministrateur) && (
                                                     <td>
                                                         <span className="badge bg-secondary">
                                                             {d.demandeur?.service?.nom || "Service non défini"}
@@ -456,6 +518,24 @@ const Validation = () => {
                                                                 </button>
                                                             </>
                                                         )}
+                                                        {isAdministrateur && d.statut === "EN_COURS" && (
+                                                            <>
+                                                                <button
+                                                                    className="btn btn-success btn-sm"
+                                                                    onClick={() => handleApproveFinal(d.id_demande)}
+                                                                    title="Approuver définitivement la demande"
+                                                                >
+                                                                    ✅ Approuver Final
+                                                                </button>
+                                                                <button
+                                                                    className="btn btn-danger btn-sm"
+                                                                    onClick={() => handleRejectFinal(d.id_demande)}
+                                                                    title="Refuser définitivement la demande"
+                                                                >
+                                                                    ❌ Refuser Final
+                                                                </button>
+                                                            </>
+                                                        )}
                                                         {!isSupportIT && d.dejaValidee && (
                                                             <span className="text-muted small">
                                                                 {d.validationExistante && d.validationExistante.statut === 'REFUSEE' ? (
@@ -482,19 +562,36 @@ const Validation = () => {
                                 <p className="text-muted">
                                     {isSupportIT 
                                         ? "Aucune demande validée par les managers N+1 trouvée. Le Support IT voit uniquement les demandes qui ont été approuvées par les managers N+1 de tous services."
+                                        : isAdministrateur
+                                        ? "Aucune demande prête pour validation finale trouvée. L'Administrateur voit uniquement les demandes qui ont été approuvées par le SI et sont en attente de décision finale."
                                         : "Aucune demande trouvée pour votre service"
                                     }
                                 </p>
-                                {isSupportIT && (
+                                {(isSupportIT || isAdministrateur) && (
                                     <div className="mt-3 p-3 bg-light rounded">
                                         <h6>ℹ️ Information</h6>
-                                        <p className="mb-2">En tant que Support IT, vous voyez uniquement les demandes qui :</p>
-                                        <ul className="text-start text-muted">
-                                            <li>Ont le statut "EN_COURS"</li>
-                                            <li>Ont été validées par un Manager N+1</li>
-                                            <li>N'ont pas encore été traitées par le Support IT</li>
-                                            <li>Proviennent de tous les services</li>
-                                        </ul>
+                                        {isSupportIT ? (
+                                            <>
+                                                <p className="mb-2">En tant que Support IT, vous voyez uniquement les demandes qui :</p>
+                                                <ul className="text-start text-muted">
+                                                    <li>Ont le statut "EN_COURS"</li>
+                                                    <li>Ont été validées par un Manager N+1</li>
+                                                    <li>N'ont pas encore été traitées par le Support IT</li>
+                                                    <li>Proviennent de tous les services</li>
+                                                </ul>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <p className="mb-2">En tant qu'Administrateur, vous voyez uniquement les demandes qui :</p>
+                                                <ul className="text-start text-muted">
+                                                    <li>Ont le statut "EN_COURS"</li>
+                                                    <li>Ont été validées par un Manager N+1</li>
+                                                    <li>Ont un rapport IT soumis et validé par le Support IT</li>
+                                                    <li>Ont été validées par le SI</li>
+                                                    <li>Sont en attente de décision finale de l'Administration</li>
+                                                </ul>
+                                            </>
+                                        )}
                                     </div>
                                 )}
                             </div>

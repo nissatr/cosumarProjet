@@ -24,7 +24,6 @@ public class DataInitializer {
         createRoleIfNotExists("demandeur");
         createRoleIfNotExists("Manager N+1");
         createRoleIfNotExists("SI");
-        createRoleIfNotExists("Direction Générale");
         createRoleIfNotExists("Support IT");
         createRoleIfNotExists("Administrateur");
         createRoleIfNotExists("SUPER_ADMIN");

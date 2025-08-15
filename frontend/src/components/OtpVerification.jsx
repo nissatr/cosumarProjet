@@ -16,6 +16,7 @@ const OtpVerification = ({ email, onSuccess, onCancel }) => {
 
         setIsSubmitting(true);
 
+
         try {
             console.log("Vérification OTP pour:", email, "avec code:", otp);
             const response = await authService.verifyLoginOtp(email, otp);

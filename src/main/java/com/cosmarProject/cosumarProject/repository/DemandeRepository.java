@@ -66,4 +66,52 @@ public interface DemandeRepository extends JpaRepository<Demande, Long> {
     List<Demande> findDemandesEnCoursParService(@Param("serviceId") Long serviceId);
 
 
+    // SI : toutes les demandes EN_COURS validées par Manager N+1,
+    // ayant un rapport IT du Support IT (validées ou non par SI)
+    @Query("""
+        SELECT d FROM Demande d
+        WHERE d.statut = 'EN_COURS'
+        AND EXISTS (
+            SELECT v1 FROM Validation v1
+            WHERE v1.demande = d
+            AND v1.niveau = 'Manager N+1'
+            AND v1.statutValidation = 'ACCEPTEE'
+        )
+        AND EXISTS (
+            SELECT r FROM RapportIT r WHERE r.demande = d
+        )
+        ORDER BY d.dateCreation ASC
+    """)
+    List<Demande> findDemandesPourSI();
+
+    // Administrateur : toutes les demandes EN_COURS validées par Manager N+1, Support IT et SI
+    @Query("""
+        SELECT d FROM Demande d
+        WHERE d.statut = 'EN_COURS'
+        AND EXISTS (
+            SELECT v1 FROM Validation v1
+            WHERE v1.demande = d
+            AND v1.niveau = 'Manager N+1'
+            AND v1.statutValidation = 'ACCEPTEE'
+        )
+        AND EXISTS (
+            SELECT v2 FROM Validation v2
+            WHERE v2.demande = d
+            AND v2.niveau = 'Support IT'
+            AND v2.statutValidation = 'ACCEPTEE'
+        )
+        AND EXISTS (
+            SELECT v3 FROM Validation v3
+            WHERE v3.demande = d
+            AND v3.niveau = 'SI'
+            AND v3.statutValidation = 'ACCEPTEE'
+        )
+        AND NOT EXISTS (
+            SELECT v4 FROM Validation v4
+            WHERE v4.demande = d AND v4.niveau = 'Administration'
+        )
+        ORDER BY d.dateCreation ASC
+    """)
+    List<Demande> findDemandesPourAdministrateur();
+
 }

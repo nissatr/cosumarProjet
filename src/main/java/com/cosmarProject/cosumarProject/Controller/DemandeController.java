@@ -628,6 +628,259 @@ public class DemandeController {
         }
     }
 
+    // ===================== SI =====================
+    @GetMapping("/demandes/si")
+    public ResponseEntity<?> getDemandesPourSI() {
+        try {
+            System.out.println("🔄 Récupération des demandes pour SI");
+            
+            // Debug: vérifier d'abord toutes les demandes
+            List<Demande> toutesDemandes = demandeRepository.findAll();
+            System.out.println("📊 Total des demandes en base: " + toutesDemandes.size());
+            
+            // Debug: vérifier les demandes avec statut EN_COURS
+            List<Demande> demandesEnCours = toutesDemandes.stream()
+                .filter(d -> d.getStatut() == StatutDemande.EN_COURS)
+                .collect(Collectors.toList());
+            System.out.println("📊 Demandes avec statut EN_COURS: " + demandesEnCours.size());
+            
+            // Demandes prêtes pour SI: validées par Manager N+1, rapport IT soumis et validées par Support IT, pas encore validées par SI
+            List<Demande> demandes = demandeRepository.findDemandesPourSI();
+            System.out.println("✅ Nombre de demandes trouvées pour SI: " + demandes.size());
+            
+            // Debug: afficher les détails des demandes trouvées
+            if (demandes.size() > 0) {
+                demandes.forEach(d -> {
+                    System.out.println("🔍 Demande SI ID: " + d.getId_demande() + 
+                                     ", Statut: " + d.getStatut() + 
+                                     ", Demandeur: " + (d.getDemandeur() != null ? d.getDemandeur().getEmail() : "null") +
+                                     ", Service: " + (d.getDemandeur() != null && d.getDemandeur().getService() != null ? d.getDemandeur().getService().getNom() : "null"));
+                });
+            } else {
+                System.out.println("⚠️ Aucune demande trouvée pour SI");
+                // Debug: afficher toutes les demandes EN_COURS pour comprendre pourquoi
+                System.out.println("🔍 Détail des demandes EN_COURS:");
+                demandesEnCours.forEach(d -> {
+                    System.out.println("  - ID: " + d.getId_demande() + 
+                                     ", Service: " + (d.getDemandeur() != null && d.getDemandeur().getService() != null ? d.getDemandeur().getService().getNom() : "null"));
+                });
+            }
+
+            List<Map<String, Object>> demandesAvecRapportIT = demandes.stream()
+                .map(d -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id_demande", d.getId_demande());
+                    m.put("description", d.getDescription());
+                    m.put("statut", d.getStatut());
+                    m.put("urgence", d.getUrgence());
+                    m.put("dateCreation", d.getDateCreation());
+                    m.put("commentaireAutres", d.getCommentaireAutres());
+                    if (d.getDemandeur() != null) {
+                        Map<String, Object> demandeur = new HashMap<>();
+                        demandeur.put("id_utilisateur", d.getDemandeur().getId_utilisateur());
+                        demandeur.put("nom", d.getDemandeur().getNom());
+                        demandeur.put("prenom", d.getDemandeur().getPrenom());
+                        demandeur.put("email", d.getDemandeur().getEmail());
+                        if (d.getDemandeur().getService() != null) {
+                            Map<String, Object> service = new HashMap<>();
+                            service.put("id_service", d.getDemandeur().getService().getId_service());
+                            service.put("nom", d.getDemandeur().getService().getNom());
+                            demandeur.put("service", service);
+                        }
+                        m.put("demandeur", demandeur);
+                    }
+                    if (d.getTypeDemande() != null) {
+                        Map<String, Object> typeInfo = new HashMap<>();
+                        typeInfo.put("id_type", d.getTypeDemande().getId_Type());
+                        typeInfo.put("nomType", d.getTypeDemande().getNomType());
+                        typeInfo.put("detailType", d.getTypeDemande().getDetailType());
+                        typeInfo.put("aDetailType", d.getTypeDemande().getADetailType());
+                        m.put("typeDemande", typeInfo);
+                    }
+                    boolean rapportITExiste = rapportITRepository.findLatestByDemandeId(d.getId_demande()).isPresent();
+                    m.put("rapportITExiste", rapportITExiste);
+                    
+                    // Ajouter les informations de validation SI si elles existent
+                    List<Validation> validationsSI = validationRepository.findLatestByDemandeAndNiveau(d.getId_demande(), "SI");
+                    if (!validationsSI.isEmpty()) {
+                        Validation validationSI = validationsSI.get(0); // Prendre la plus récente
+                        Map<String, Object> validationSIData = new HashMap<>();
+                        validationSIData.put("statut", validationSI.getStatutValidation());
+                        validationSIData.put("commentaire", validationSI.getCommentaire());
+                        validationSIData.put("dateValidation", validationSI.getDateValidation());
+                        m.put("validationSI", validationSIData);
+                    }
+                    
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "demandes", demandesAvecRapportIT
+            ));
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la récupération des demandes SI: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
+        }
+    }
+
+    @PutMapping("/demandes/{id}/si/approve")
+    public ResponseEntity<?> approveDemandeParSI(@PathVariable Long id, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            Utilisateur validateur = utilisateurRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+            validationService.validerDemande(id, validateur.getId_utilisateur(), "SI", true, "Approuvé par SI");
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Demande approuvée par SI"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    @PutMapping("/demandes/{id}/si/reject")
+    public ResponseEntity<?> rejectDemandeParSI(@PathVariable Long id, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            Utilisateur validateur = utilisateurRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+            validationService.validerDemande(id, validateur.getId_utilisateur(), "SI", false, "Refusé par SI");
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Demande refusée par SI"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+    
+    @GetMapping("/demandes/{id}/validations")
+    public ResponseEntity<?> getValidationsForDemande(@PathVariable Long id) {
+        try {
+            Demande demande = demandeRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Demande non trouvée"));
+            
+            List<Validation> validations = validationRepository.findByDemande(demande);
+            
+            List<Map<String, Object>> validationsData = validations.stream()
+                .map(v -> Map.of(
+                    "id", v.getId_validation(),
+                    "niveau", v.getNiveau(),
+                    "statut", v.getStatutValidation(),
+                    "commentaire", v.getCommentaire(),
+                    "dateValidation", v.getDateValidation(),
+                    "validateur", Map.of(
+                        "id", v.getValidateur().getId_utilisateur(),
+                        "nom", v.getValidateur().getNom(),
+                        "prenom", v.getValidateur().getPrenom()
+                    )
+                ))
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "validations", validationsData
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
+        }
+    }
+    
+    // ===================== ADMINISTRATEUR =====================
+    @GetMapping("/demandes/administrateur")
+    public ResponseEntity<?> getDemandesPourAdministrateur() {
+        try {
+            System.out.println("🔄 Récupération des demandes pour Administrateur");
+            
+            // Demandes prêtes pour Administrateur: validées par Manager N+1, Support IT et SI
+            List<Demande> demandes = demandeRepository.findDemandesPourAdministrateur();
+            System.out.println("✅ Nombre de demandes trouvées pour Administrateur: " + demandes.size());
+
+            List<Map<String, Object>> demandesAvecDetails = demandes.stream()
+                .map(d -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("id_demande", d.getId_demande());
+                    m.put("description", d.getDescription());
+                    m.put("statut", d.getStatut());
+                    m.put("urgence", d.getUrgence());
+                    m.put("dateCreation", d.getDateCreation());
+                    m.put("commentaireAutres", d.getCommentaireAutres());
+                    if (d.getDemandeur() != null) {
+                        Map<String, Object> demandeur = new HashMap<>();
+                        demandeur.put("id_utilisateur", d.getDemandeur().getId_utilisateur());
+                        demandeur.put("nom", d.getDemandeur().getNom());
+                        demandeur.put("prenom", d.getDemandeur().getPrenom());
+                        demandeur.put("email", d.getDemandeur().getEmail());
+                        if (d.getDemandeur().getService() != null) {
+                            Map<String, Object> service = new HashMap<>();
+                            service.put("id_service", d.getDemandeur().getService().getId_service());
+                            service.put("nom", d.getDemandeur().getService().getNom());
+                            demandeur.put("service", service);
+                        }
+                        m.put("demandeur", demandeur);
+                    }
+                    if (d.getTypeDemande() != null) {
+                        Map<String, Object> typeInfo = new HashMap<>();
+                        typeInfo.put("id_type", d.getTypeDemande().getId_Type());
+                        typeInfo.put("nomType", d.getTypeDemande().getNomType());
+                        typeInfo.put("detailType", d.getTypeDemande().getDetailType());
+                        typeInfo.put("aDetailType", d.getTypeDemande().getADetailType());
+                        m.put("typeDemande", typeInfo);
+                    }
+                    
+                    // Vérifier si un rapport IT existe
+                    boolean rapportITExiste = rapportITRepository.findLatestByDemandeId(d.getId_demande()).isPresent();
+                    m.put("rapportITExiste", rapportITExiste);
+                    
+                    // Ajouter les informations de validation SI si elles existent
+                    List<Validation> validationsSI = validationRepository.findLatestByDemandeAndNiveau(d.getId_demande(), "SI");
+                    if (!validationsSI.isEmpty()) {
+                        Validation validationSI = validationsSI.get(0);
+                        Map<String, Object> validationSIData = new HashMap<>();
+                        validationSIData.put("statut", validationSI.getStatutValidation());
+                        validationSIData.put("commentaire", validationSI.getCommentaire());
+                        validationSIData.put("dateValidation", validationSI.getDateValidation());
+                        m.put("validationSI", validationSIData);
+                    }
+                    
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+            return ResponseEntity.ok(Map.of(
+                "success", true,
+                "demandes", demandesAvecDetails
+            ));
+        } catch (Exception e) {
+            System.out.println("❌ Erreur lors de la récupération des demandes Administrateur: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of(
+                "success", false,
+                "message", e.getMessage()
+            ));
+        }
+    }
+
     // ===================== ENDPOINT DE TEST =====================
     @GetMapping("/demandes/debug-support-it")
     public ResponseEntity<?> debugSupportIT() {
