@@ -52,16 +52,7 @@ const AdminPanel = () => {
 
     useEffect(() => {
         fetchData();
-        
-        // Rafraîchir les données toutes les 30 secondes pour les demandes
-        const interval = setInterval(() => {
-            if (activeTab === 'requests') {
-                fetchData();
-            }
-        }, 30000);
-        
-        return () => clearInterval(interval);
-    }, [activeTab]);
+    }, []);
 
     const fetchData = async () => {
         try {
@@ -500,25 +491,12 @@ const AdminPanel = () => {
                         <div className="card border-0 shadow-sm">
                             <div className="card-body">
                                 <div className="mb-4">
-                                    <div className="d-flex justify-content-between align-items-center mb-3">
-                                        <div>
-                                            <h4 className="fw-bold mb-1" style={{ color: "#495057" }}>
-                                                Demandes en Cours
-                                            </h4>
-                                            <p className="text-muted mb-0">
-                                                Visualisez et suivez toutes les demandes du système
-                                            </p>
-                                        </div>
-                                        <button
-                                            className="btn btn-outline-primary btn-sm"
-                                            onClick={fetchData}
-                                            disabled={loading}
-                                            title="Rafraîchir les données"
-                                        >
-                                            <i className={`bi ${loading ? 'bi-arrow-clockwise spin' : 'bi-arrow-clockwise'} me-1`}></i>
-                                            {loading ? 'Actualisation...' : 'Actualiser'}
-                                        </button>
-                                    </div>
+                                    <h4 className="fw-bold mb-1" style={{ color: "#495057" }}>
+                                        Demandes en Cours
+                                    </h4>
+                                    <p className="text-muted mb-3">
+                                        Visualisez et suivez toutes les demandes du système
+                                    </p>
                                     
                                     {/* Barre de recherche et filtres */}
                                     <div className="row g-3">
