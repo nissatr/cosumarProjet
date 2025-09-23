@@ -66,11 +66,11 @@ public interface DemandeRepository extends JpaRepository<Demande, Long> {
     List<Demande> findDemandesEnCoursParService(@Param("serviceId") Long serviceId);
 
 
-    // SI : toutes les demandes EN_COURS validées par Manager N+1,
+    // SI : toutes les demandes EN_COURS ou ACCEPTEE validées par Manager N+1,
     // ayant un rapport IT du Support IT (validées ou non par SI)
     @Query("""
         SELECT d FROM Demande d
-        WHERE d.statut = 'EN_COURS'
+        WHERE d.statut IN ('EN_COURS', 'ACCEPTEE')
         AND EXISTS (
             SELECT v1 FROM Validation v1
             WHERE v1.demande = d
@@ -85,9 +85,10 @@ public interface DemandeRepository extends JpaRepository<Demande, Long> {
     List<Demande> findDemandesPourSI();
 
     // Administrateur : toutes les demandes EN_COURS validées par Manager N+1, Support IT et SI
+    // Inclut aussi les demandes déjà approuvées par l'Administration
     @Query("""
         SELECT d FROM Demande d
-        WHERE d.statut = 'EN_COURS'
+        WHERE d.statut IN ('EN_COURS', 'ACCEPTEE')
         AND EXISTS (
             SELECT v1 FROM Validation v1
             WHERE v1.demande = d
@@ -105,10 +106,6 @@ public interface DemandeRepository extends JpaRepository<Demande, Long> {
             WHERE v3.demande = d
             AND v3.niveau = 'SI'
             AND v3.statutValidation = 'ACCEPTEE'
-        )
-        AND NOT EXISTS (
-            SELECT v4 FROM Validation v4
-            WHERE v4.demande = d AND v4.niveau = 'Administration'
         )
         ORDER BY d.dateCreation ASC
     """)

@@ -27,8 +27,19 @@ const Login = () => {
         }));
     };
 
-    const handleOtpSuccess = () => {
-        navigate("/dashboard");
+    const handleOtpSuccess = (userInfo) => {
+        console.log("handleOtpSuccess - userInfo:", userInfo);
+        // Rediriger selon le rôle de l'utilisateur
+        if (userInfo?.role === 'SUPER_ADMIN' || userInfo?.role === 'Super Admin') {
+            console.log("Redirection vers /admin pour Super Admin");
+            navigate("/admin");
+        } else if (userInfo?.role === 'Administrateur') {
+            console.log("Redirection vers /validation pour Administrateur");
+            navigate("/validation");
+        } else {
+            console.log("Redirection vers /dashboard pour rôle:", userInfo?.role);
+            navigate("/dashboard");
+        }
     };
 
     const handleOtpCancel = () => {
@@ -49,15 +60,6 @@ const Login = () => {
             if (formData.password.length < 6) {
                 toast.error("Le mot de passe doit contenir au moins 6 caractères");
                 return;
-            } else if (response.success) {
-                toast.success("Connexion réussie !");
-                // Récupérer le rôle de l'utilisateur depuis la réponse
-                const userRole = response.user?.role;
-                if (userRole === 'Administrateur') {
-                    navigate("/validation");
-                } else {
-                    navigate("/dashboard");
-                }
             }
 
             setIsSubmitting(true);
@@ -128,7 +130,20 @@ const Login = () => {
                 }
             } else if (response.success) {
                 toast.success("Connexion réussie !");
-                navigate("/dashboard");
+                console.log("Connexion directe - response:", response);
+                // Rediriger selon le rôle de l'utilisateur
+                const userRole = response.user?.role;
+                console.log("Rôle utilisateur:", userRole);
+                if (userRole === 'SUPER_ADMIN' || userRole === 'Super Admin') {
+                    console.log("Redirection vers /admin pour Super Admin");
+                    navigate("/admin");
+                } else if (userRole === 'Administrateur') {
+                    console.log("Redirection vers /validation pour Administrateur");
+                    navigate("/validation");
+                } else {
+                    console.log("Redirection vers /dashboard pour rôle:", userRole);
+                    navigate("/dashboard");
+                }
             }
         } catch (error) {
             toast.error(error.message || "Erreur lors de la connexion");
@@ -414,7 +429,7 @@ const Login = () => {
                         {/* Footer */}
                         <div className="text-center mt-4">
                             <p className="text-white opacity-75 mb-0">
-                                ©️ 2024 Équipement IT - Système de gestion des demandes
+                                ©️ 2025 Équipement IT - Système de gestion des demandes
                             </p>
                         </div>
                     </div>

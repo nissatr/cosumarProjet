@@ -148,7 +148,7 @@ const MesDemandes = () => {
                                 onChange={e => setUrgenceFilter(e.target.value)}>
                             <option value="">Toutes les urgences</option>
                             <option value="FAIBLE">Faible</option>
-                            <option value="MOYENNE">Moyenne</option>
+                            <option value="NORMALE">Normale</option>
                             <option value="ELEVEE">Élevée</option>
                         </select>
 

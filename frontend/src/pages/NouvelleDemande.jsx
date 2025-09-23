@@ -22,9 +22,9 @@ const NouvelleDemande = () => {
     ];
 
     const urgencyLevels = [
-        { value: "faible", label: "Faible" },
-        { value: "normale", label: "Normale" },
-        { value: "elevee", label: "Élevée" },
+        { value: "FAIBLE", label: "Faible" },
+        { value: "NORMALE", label: "Normale" },
+        { value: "ELEVEE", label: "Élevée" },
     ];
 
     const handleSubmit = async (e) => {

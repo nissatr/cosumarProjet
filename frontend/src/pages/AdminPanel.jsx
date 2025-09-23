@@ -1044,40 +1044,64 @@ const AdminPanel = () => {
                                     <div className="flex-grow-1">
                                         <h6 className="mb-1">Demande créée</h6>
                                         <p className="text-muted mb-1">Demandeur</p>
-                                        <span className="badge bg-dark">Terminé</span>
+                                        <span className="badge bg-success">Terminé</span>
                                     </div>
                                 </div>
                                 
                                 <div className="d-flex align-items-center p-3 border rounded">
                                     <div className="me-3">
-                                        <i className="bi bi-clock text-primary" style={{ fontSize: '1.5rem' }}></i>
+                                        <i className={`bi ${selectedRequest.statut === 'approuvée' ? 'bi-check-circle text-success' : 
+                                            selectedRequest.statut.includes('Manager N+1') ? 'bi-clock text-primary' : 
+                                            'bi-exclamation-circle text-muted'}`} style={{ fontSize: '1.5rem' }}></i>
                                     </div>
                                     <div className="flex-grow-1">
                                         <h6 className="mb-1">Validation Manager N+1</h6>
                                         <p className="text-muted mb-1">Manager N+1</p>
-                                        <span className="badge bg-secondary">En cours</span>
+                                        <span className={`badge ${selectedRequest.statut === 'approuvée' ? 'bg-success' : 
+                                            selectedRequest.statut.includes('Manager N+1') ? 'bg-primary' : 
+                                            'bg-secondary'}`}>
+                                            {selectedRequest.statut === 'approuvée' ? 'Terminé' : 
+                                             selectedRequest.statut.includes('Manager N+1') ? 'En cours' : 
+                                             'En attente'}
+                                        </span>
                                     </div>
                                 </div>
                                 
                                 <div className="d-flex align-items-center p-3 border rounded">
                                     <div className="me-3">
-                                        <i className="bi bi-exclamation-circle text-muted" style={{ fontSize: '1.5rem' }}></i>
+                                        <i className={`bi ${selectedRequest.statut === 'approuvée' ? 'bi-check-circle text-success' : 
+                                            selectedRequest.statut.includes('SI') ? 'bi-clock text-primary' : 
+                                            'bi-exclamation-circle text-muted'}`} style={{ fontSize: '1.5rem' }}></i>
                                     </div>
                                     <div className="flex-grow-1">
                                         <h6 className="mb-1">Traitement SI</h6>
                                         <p className="text-muted mb-1">SI</p>
-                                        <span className="badge bg-secondary">En attente</span>
+                                        <span className={`badge ${selectedRequest.statut === 'approuvée' ? 'bg-success' : 
+                                            selectedRequest.statut.includes('SI') ? 'bg-primary' : 
+                                            'bg-secondary'}`}>
+                                            {selectedRequest.statut === 'approuvée' ? 'Terminé' : 
+                                             selectedRequest.statut.includes('SI') ? 'En cours' : 
+                                             'En attente'}
+                                        </span>
                                     </div>
                                 </div>
                                 
                                 <div className="d-flex align-items-center p-3 border rounded">
                                     <div className="me-3">
-                                        <i className="bi bi-exclamation-circle text-muted" style={{ fontSize: '1.5rem' }}></i>
+                                        <i className={`bi ${selectedRequest.statut === 'approuvée' ? 'bi-check-circle text-success' : 
+                                            selectedRequest.statut.includes('Administration') ? 'bi-clock text-primary' : 
+                                            'bi-exclamation-circle text-muted'}`} style={{ fontSize: '1.5rem' }}></i>
                                     </div>
                                     <div className="flex-grow-1">
                                         <h6 className="mb-1">Approbation Direction Générale</h6>
                                         <p className="text-muted mb-1">Direction Générale</p>
-                                        <span className="badge bg-secondary">En attente</span>
+                                        <span className={`badge ${selectedRequest.statut === 'approuvée' ? 'bg-success' : 
+                                            selectedRequest.statut.includes('Administration') ? 'bg-primary' : 
+                                            'bg-secondary'}`}>
+                                            {selectedRequest.statut === 'approuvée' ? 'Terminé' : 
+                                             selectedRequest.statut.includes('Administration') ? 'En cours' : 
+                                             'En attente'}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

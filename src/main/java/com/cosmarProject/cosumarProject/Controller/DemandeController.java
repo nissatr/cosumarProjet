@@ -863,6 +863,24 @@ public class DemandeController {
                         m.put("validationSI", validationSIData);
                     }
                     
+                    // Ajouter les informations de validation Administration si elles existent
+                    List<Validation> validationsAdmin = validationRepository.findLatestByDemandeAndNiveau(d.getId_demande(), "Administration");
+                    if (!validationsAdmin.isEmpty()) {
+                        Validation validationAdmin = validationsAdmin.get(0);
+                        Map<String, Object> validationAdminData = new HashMap<>();
+                        validationAdminData.put("statut", validationAdmin.getStatutValidation());
+                        validationAdminData.put("commentaire", validationAdmin.getCommentaire());
+                        validationAdminData.put("dateValidation", validationAdmin.getDateValidation());
+                        m.put("validationAdministration", validationAdminData);
+                        
+                        // Ajouter le statut final pour les demandes approuvées par l'Administration
+                        if ("ACCEPTEE".equals(validationAdmin.getStatutValidation())) {
+                            m.put("statutFinal", "Approuvée définitivement");
+                        } else if ("REFUSEE".equals(validationAdmin.getStatutValidation())) {
+                            m.put("statutFinal", "Refusée définitivement");
+                        }
+                    }
+                    
                     return m;
                 })
                 .collect(Collectors.toList());
@@ -937,6 +955,49 @@ public class DemandeController {
             return ResponseEntity.status(500).body(Map.of(
                 "success", false,
                 "message", e.getMessage()
+            ));
+        }
+    }
+
+    // ===================== ENDPOINTS ADMINISTRATEUR =====================
+    @PutMapping("/demandes/{id}/administrateur/approve")
+    public ResponseEntity<?> approveDemandeAdministrateur(@PathVariable Long id, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            Utilisateur validateur = utilisateurRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+            validationService.validerDemande(id, validateur.getId_utilisateur(), "Administration", true, "Approuvé définitivement par l'Administration");
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Demande approuvée définitivement par l'Administration"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
+            ));
+        }
+    }
+
+    @PutMapping("/demandes/{id}/administrateur/reject")
+    public ResponseEntity<?> rejectDemandeAdministrateur(@PathVariable Long id, Authentication authentication) {
+        try {
+            String email = authentication.getName();
+            Utilisateur validateur = utilisateurRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Utilisateur introuvable"));
+
+            validationService.validerDemande(id, validateur.getId_utilisateur(), "Administration", false, "Refusé définitivement par l'Administration");
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "Demande refusée définitivement par l'Administration"
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of(
+                    "success", false,
+                    "message", e.getMessage()
             ));
         }
     }

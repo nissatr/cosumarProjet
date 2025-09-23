@@ -1,0 +1,49 @@
+# 🚀 Guide d'exécution du projet Cosumar
+
+## Prérequis
+- Java 17+
+- PostgreSQL
+- Maven
+- npm
+
+## 📋 Configuration Backend (Spring Boot)
+
+### 1. Modifier le fichier `application.properties`
+
+Ouvrez le fichier `src/main/resources/application.properties` et ajoutez :
+
+```properties
+spring.application.name=cosumarProject
+
+server.port=8089
+
+# Configuration PostgreSQL
+spring.datasource.url=jdbc:postgresql://localhost:5432/cosumarDB
+spring.datasource.username=cosumarUser
+spring.datasource.password=
+
+-- Se connecter à PostgreSQL
+psql -U postgres
+
+-- Créer la base de données
+CREATE DATABASE cosumarDB;
+
+-- Créer l'utilisateur
+CREATE USER cosumarUser WITH PASSWORD 'cosumar1929';
+
+-- Donner les privilèges
+GRANT ALL PRIVILEGES ON DATABASE cosumarDB TO cosumarUser;
+
+-- Quitter
+\q
+# Se positionner dans le dossier racine du projet
+cd cosumarProjet
+
+# Compiler et exécuter l'application Spring Boot
+mvn spring-boot:run
+
+# Ou alternative
+mvn clean install
+mvn spring-boot:run
+npm install
+npm run dev

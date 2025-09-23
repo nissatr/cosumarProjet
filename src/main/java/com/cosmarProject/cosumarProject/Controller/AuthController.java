@@ -127,11 +127,24 @@ public class AuthController {
                     System.out.println("Erreur lors de l'envoi de la notification: " + e.getMessage());
                 }
 
+                // Récupérer les informations complètes de l'utilisateur
+                Utilisateur utilisateurComplet = utilisateurService.findByEmail(request.getEmail());
+                
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", true);
                 response.put("message", "Connexion réussie");
                 response.put("email", request.getEmail());
                 response.put("requiresOtp", false);
+                
+                // Ajouter les informations de l'utilisateur pour la redirection
+                Map<String, Object> userInfo = new HashMap<>();
+                userInfo.put("id", utilisateurComplet.getId_utilisateur());
+                userInfo.put("email", utilisateurComplet.getEmail());
+                userInfo.put("nom", utilisateurComplet.getNom());
+                userInfo.put("prenom", utilisateurComplet.getPrenom());
+                userInfo.put("role", utilisateurComplet.getRole() != null ? utilisateurComplet.getRole().getNom() : null);
+                userInfo.put("service", utilisateurComplet.getService() != null ? utilisateurComplet.getService().getNom() : null);
+                response.put("user", userInfo);
 
                 return ResponseEntity.ok()
                         .header(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -457,10 +470,23 @@ public class AuthController {
                 System.out.println("Erreur lors de l'envoi de la notification: " + e.getMessage());
             }
             
+            // Récupérer les informations complètes de l'utilisateur
+            Utilisateur utilisateurComplet = utilisateurService.findByEmail(email);
+            
             Map<String, Object> response = new HashMap<>();
             response.put("success", true);
             response.put("message", "Compte vérifié et connexion réussie");
             response.put("email", email);
+            
+            // Ajouter les informations de l'utilisateur pour la redirection
+            Map<String, Object> userInfo = new HashMap<>();
+            userInfo.put("id", utilisateurComplet.getId_utilisateur());
+            userInfo.put("email", utilisateurComplet.getEmail());
+            userInfo.put("nom", utilisateurComplet.getNom());
+            userInfo.put("prenom", utilisateurComplet.getPrenom());
+            userInfo.put("role", utilisateurComplet.getRole() != null ? utilisateurComplet.getRole().getNom() : null);
+            userInfo.put("service", utilisateurComplet.getService() != null ? utilisateurComplet.getService().getNom() : null);
+            response.put("user", userInfo);
             
             return ResponseEntity.ok()
                     .header(HttpHeaders.SET_COOKIE, cookie.toString())

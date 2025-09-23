@@ -166,7 +166,7 @@ const Header = () => {
                         className="mt-5 pt-4 border-top text-center"
                         style={{ fontSize: "0.9rem", color: "#6B7280" }}
                     >
-                        <p className="mb-1">© 2025 Cosumar. Développé par NissAtr</p>
+                        <p className="mb-1">© 2025 Cosumar. Développé par NissAtr et dnsaad</p>
                         <p className="mb-0">Support : it-support@cosumar.co.ma</p>
                     </footer>
                 </div>

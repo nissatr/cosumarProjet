@@ -209,6 +209,16 @@ export const demandeService = {
         return response.data;
     },
 
+    // Validation Administrateur
+    approveDemandeAdministrateur: async (id) => {
+        const response = await api.put(`/demandes/${id}/administrateur/approve`);
+        return response.data;
+    },
+    rejectDemandeAdministrateur: async (id) => {
+        const response = await api.put(`/demandes/${id}/administrateur/reject`);
+        return response.data;
+    },
+
     // Soumettre rapport IT
     submitRapportIT: async (id, { fichier, commentaire }) => {
         const formData = new FormData();

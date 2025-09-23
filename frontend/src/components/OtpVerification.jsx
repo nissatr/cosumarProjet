@@ -24,8 +24,8 @@ const OtpVerification = ({ email, onSuccess, onCancel }) => {
 
             if (response.success) {
                 toast.success("Connexion réussie !");
-                console.log("Appel de onSuccess()");
-                onSuccess();
+                console.log("Appel de onSuccess() avec userInfo:", response.user);
+                onSuccess(response.user);
             } else {
                 toast.error(response.message || "Code OTP invalide");
             }

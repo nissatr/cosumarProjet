@@ -15,23 +15,124 @@ const Validation = () => {
     const [isSupportIT, setIsSupportIT] = useState(false);
     const [isManagerN1, setIsManagerN1] = useState(false);
     const [isAdministrateur, setIsAdministrateur] = useState(false);
+    const [isSI, setIsSI] = useState(false);
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [rapportFile, setRapportFile] = useState(null);
     const [rapportComment, setRapportComment] = useState("");
     const [n1Decision, setN1Decision] = useState({}); // id_demande -> 'ACCEPTEE' | 'REFUSEE'
 
     // Récupérer les demandes du service de l'utilisateur connecté
+    const fetchDemandesWithRoles = async (isSupportITParam, isManagerN1Param, isAdministrateurParam, isSIParam) => {
+        setLoading(true);
+        setIsRefreshing(true);
+        try {
+            console.log("🔍 fetchDemandesWithRoles - Rôles passés:", { isSupportITParam, isManagerN1Param, isAdministrateurParam, isSIParam });
+            
+            let data;
+            if (isSupportITParam) {
+                console.log("🔄 Récupération des demandes pour Support IT...");
+                data = await demandeService.getMesDemandesService();
+                console.log("📊 Données Support IT reçues:", data);
+            } else if (isSIParam) {
+                console.log("🔄 Récupération des demandes pour SI...");
+                data = await demandeService.getDemandesSI();
+                console.log("📊 Données SI reçues:", data);
+            } else if (isAdministrateurParam) {
+                console.log("🔄 Récupération des demandes pour Administrateur...");
+                data = await demandeService.getDemandesPourAdministrateur();
+                console.log("📊 Données Administrateur reçues:", data);
+            } else {
+                console.log("🔄 Récupération des demandes du service...");
+                data = await demandeService.getMesDemandesService();
+                console.log("📊 Données service reçues:", data);
+            }
+            
+            // Gérer la nouvelle structure de données avec validation
+            let newDemandes;
+            if (Array.isArray(data)) {
+                // Ancien format (pour Support IT)
+                newDemandes = data;
+            } else if (data && Array.isArray(data.demandes)) {
+                // Nouveau format (pour Manager N+1, SI, Administrateur) - données structurées
+                newDemandes = data.demandes;
+                console.log("🔍 Demandes reçues:", newDemandes);
+                
+                // Debug: afficher les détails de chaque demande
+                newDemandes.forEach((d, index) => {
+                    console.log(`🔍 Demande ${index + 1}:`, {
+                        id: d.id_demande,
+                        statut: d.statut,
+                        dejaValidee: d.dejaValidee,
+                        validationExistante: d.validationExistante,
+                        demandeur: d.demandeur?.prenom + " " + d.demandeur?.nom,
+                        type: d.typeDemande?.nomType,
+                        description: d.description
+                    });
+                });
+            } else {
+                newDemandes = [];
+            }
+            
+            console.log("✅ Demandes normalisées:", newDemandes.length);
+            console.log("🔍 Détail des demandes:", newDemandes.map(d => ({
+                id: d.id_demande,
+                statut: d.statut,
+                dejaValidee: d.dejaValidee,
+                demandeur: d.demandeur?.prenom + " " + d.demandeur?.nom,
+                type: d.typeDemande?.nomType
+            })));
+
+            // Notifier le manager si des statuts ont changé depuis le dernier chargement
+            if (previousDemandes.length > 0) {
+                newDemandes.forEach((nd) => {
+                    const od = previousDemandes.find(d => d.id_demande === nd.id_demande);
+                    if (od && od.statut !== nd.statut) {
+                        const messages = {
+                            'ACCEPTEE': '✅ Demande validée (fin de processus).',
+                            'REFUSEE': '❌ Demande refusée à une étape du processus.',
+                            'EN_COURS': '🔄 Demande en cours de validation.'
+                        };
+                        toast.info(messages[nd.statut] || `📊 Statut mis à jour: ${nd.statut}`, {
+                            position: "top-right",
+                            autoClose: 6000,
+                        });
+                    }
+                });
+            }
+
+            setDemandes(newDemandes);
+            setPreviousDemandes(newDemandes);
+        } catch (error) {
+            console.error("Erreur fetchDemandesWithRoles:", error);
+            toast.error("Erreur lors de la récupération des demandes");
+        } finally {
+            setLoading(false);
+            setIsRefreshing(false);
+        }
+    };
+
+    // Version qui utilise les états (pour les boutons de rafraîchissement)
     const fetchDemandes = async () => {
         setLoading(true);
         setIsRefreshing(true);
         try {
-            console.log("🔍 fetchDemandes - Rôle détecté:", { isSupportIT, isManagerN1, isAdministrateur });
+            console.log("🔍 fetchDemandes - Rôle détecté:", { isSupportIT, isManagerN1, isAdministrateur, isSI });
+            console.log("🔍 fetchDemandes - État complet:", { 
+                isSupportIT: Boolean(isSupportIT), 
+                isManagerN1: Boolean(isManagerN1), 
+                isAdministrateur: Boolean(isAdministrateur), 
+                isSI: Boolean(isSI) 
+            });
             
             let data;
             if (isSupportIT) {
                 console.log("🔄 Récupération des demandes pour Support IT...");
                 data = await demandeService.getMesDemandesService();
                 console.log("📊 Données Support IT reçues:", data);
+            } else if (isSI) {
+                console.log("🔄 Récupération des demandes pour SI...");
+                data = await demandeService.getDemandesSI();
+                console.log("📊 Données SI reçues:", data);
             } else if (isAdministrateur) {
                 console.log("🔄 Récupération des demandes pour Administrateur...");
                 data = await demandeService.getDemandesPourAdministrateur();
@@ -48,7 +149,7 @@ const Validation = () => {
                 // Ancien format (pour Support IT)
                 newDemandes = data;
             } else if (data && Array.isArray(data.demandes)) {
-                // Nouveau format (pour Manager N+1) - données déjà structurées
+                // Nouveau format (pour Manager N+1, SI, Administrateur) - données structurées
                 newDemandes = data.demandes;
                 console.log("🔍 Demandes reçues:", newDemandes);
                 
@@ -108,22 +209,31 @@ const Validation = () => {
 
     const handleApprove = async (id) => {
         try {
-            await demandeService.approveDemande(id);
+            if (isSI) {
+                await demandeService.approveDemandeSI(id);
+                toast.success("✅ Validation SI enregistrée. Le statut final changera à la fin du processus.", {
+                    position: "top-right",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                });
+            } else {
+                await demandeService.approveDemande(id);
+                setN1Decision((prev) => ({ ...prev, [id]: 'ACCEPTEE' }));
+                toast.success("✅ Validation N+1 enregistrée. Le statut final changera à la fin du processus.", {
+                    position: "top-right",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                });
+            }
             
             // Recharger les demandes pour afficher le nouveau statut
-            // Mettre à jour l'état local pour refléter l'approbation N+1 immédiatement
-            setN1Decision((prev) => ({ ...prev, [id]: 'ACCEPTEE' }));
             await fetchDemandes();
-            
-            // Notification de succès avec détails
-            toast.success("✅ Validation N+1 enregistrée. Le statut final changera à la fin du processus.", {
-                position: "top-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-            });
             
         } catch (error) {
             console.error("Erreur approve:", error);
@@ -136,22 +246,31 @@ const Validation = () => {
 
     const handleReject = async (id) => {
         try {
-            await demandeService.rejectDemande(id);
+            if (isSI) {
+                await demandeService.rejectDemandeSI(id);
+                toast.info("❌ Refus SI enregistré. Le statut passe à REFUSEE.", {
+                    position: "top-right",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                });
+            } else {
+                await demandeService.rejectDemande(id);
+                setN1Decision((prev) => ({ ...prev, [id]: 'REFUSEE' }));
+                toast.info("❌ Refus enregistré. Le statut passe à REFUSEE.", {
+                    position: "top-right",
+                    autoClose: 5000,
+                    hideProgressBar: false,
+                    closeOnClick: true,
+                    pauseOnHover: true,
+                    draggable: true,
+                });
+            }
             
             // Recharger les demandes pour afficher le nouveau statut
-            // Mettre à jour l'état local pour refléter le refus N+1 immédiatement
-            setN1Decision((prev) => ({ ...prev, [id]: 'REFUSEE' }));
             await fetchDemandes();
-            
-            // Notification d'info avec détails
-            toast.info("❌ Refus enregistré. Le statut passe à REFUSEE.", {
-                position: "top-right",
-                autoClose: 5000,
-                hideProgressBar: false,
-                closeOnClick: true,
-                pauseOnHover: true,
-                draggable: true,
-            });
             
         } catch (error) {
             console.error("Erreur reject:", error);
@@ -166,8 +285,8 @@ const Validation = () => {
         setSelectedDemande(demande);
         setShowDetailModal(true);
         
-        // Si c'est Support IT, récupérer le rapport existant
-        if (isSupportIT) {
+        // Si c'est Support IT, SI ou Administrateur, récupérer le rapport existant
+        if (isSupportIT || isSI || isAdministrateur) {
             try {
                 const rapportData = await demandeService.getRapportIT(demande.id_demande);
                 if (rapportData.success && rapportData.rapportIT) {
@@ -195,12 +314,23 @@ const Validation = () => {
                 const isSupport = role === "Support IT";
                 const isManager = role === "Manager N+1";
                 const isAdmin = role === "Administrateur";
+                const isSI = role === "SI";
                 
-                console.log("🎭 Rôles détectés:", { role, isSupport, isManager, isAdmin });
+                console.log("🎭 Rôles détectés:", { role, isSupport, isManager, isAdmin, isSI });
+                console.log("🎭 Comparaison exacte:", { 
+                    role: `"${role}"`, 
+                    isSupport: role === "Support IT",
+                    isManager: role === "Manager N+1", 
+                    isAdmin: role === "Administrateur",
+                    isSI: role === "SI",
+                    roleLength: role.length,
+                    siLength: "SI".length
+                });
                 
                 setIsSupportIT(isSupport);
                 setIsManagerN1(isManager);
                 setIsAdministrateur(isAdmin);
+                setIsSI(isSI);
                 
                 // Réinitialiser les filtres
                 setServiceFilter("");
@@ -208,7 +338,8 @@ const Validation = () => {
                 setUrgenceFilter("");
                 
                 // Charger les demandes appropriées selon le rôle
-                await fetchDemandes();
+                // Passer les rôles directement pour éviter les problèmes de timing
+                await fetchDemandesWithRoles(isSupport, isManager, isAdmin, isSI);
             } catch (e) {
                 console.error("❌ Erreur user-info:", e);
             }
@@ -273,9 +404,7 @@ const Validation = () => {
     // Méthodes de gestion pour l'Administrateur
     const handleApproveFinal = async (id) => {
         try {
-            // Pour l'instant, on utilise la méthode existante
-            // TODO: Implémenter la méthode spécifique pour l'administrateur
-            await demandeService.approveDemande(id);
+            await demandeService.approveDemandeAdministrateur(id);
             
             toast.success("✅ Demande approuvée définitivement par l'Administration", {
                 position: "top-right",
@@ -298,9 +427,7 @@ const Validation = () => {
 
     const handleRejectFinal = async (id) => {
         try {
-            // Pour l'instant, on utilise la méthode existante
-            // TODO: Implémenter la méthode spécifique pour l'administrateur
-            await demandeService.rejectDemande(id);
+            await demandeService.rejectDemandeAdministrateur(id);
             
             toast.success("❌ Demande refusée définitivement par l'Administration", {
                 position: "top-right",
@@ -334,12 +461,15 @@ const Validation = () => {
                         <div>
                             <h2 className="fw-bold mb-0">
                                 {isSupportIT ? "Traitement Support IT" : 
+                                 isSI ? "Validation SI" :
                                  isAdministrateur ? "Validation Finale - Administration" : 
                                  "Validation des demandes"}
                             </h2>
                             <small>
                                 {isSupportIT 
                                     ? "Traitez les demandes approuvées par les managers N+1 de tous services"
+                                    : isSI
+                                    ? "Validation des demandes avec rapport IT soumis - Décision SI"
                                     : isAdministrateur
                                     ? "Validation finale des demandes approuvées par le SI - Décision définitive"
                                     : "Visualisez et gérez les demandes de votre service"
@@ -453,7 +583,7 @@ const Validation = () => {
                                                         {d.dateCreation ? new Date(d.dateCreation).toLocaleDateString('fr-FR') : "N/A"}
                                                     </small>
                                                 </td>
-                                                {!isSupportIT && (
+                                                {(!isSupportIT && !isSI) || isSI && (
                                                     <td>
                                                         {d.dejaValidee ? (
                                                             <div>
@@ -483,6 +613,24 @@ const Validation = () => {
                                                             <span className="badge bg-danger">❌ Refusée</span>
                                                         ) : d.statut === "ACCEPTEE" ? (
                                                             <span className="badge bg-success">✅ Approuvée</span>
+                                                        ) : isSI && d.validationSI ? (
+                                                            d.validationSI.statut === "ACCEPTEE" ? (
+                                                                <span className="badge bg-success">✅ Approuvée</span>
+                                                            ) : d.validationSI.statut === "REFUSEE" ? (
+                                                                <span className="badge bg-danger">❌ Refusée</span>
+                                                            ) : (
+                                                                <span className="badge bg-primary">En cours</span>
+                                                            )
+                                                        ) : isAdministrateur && d.statutFinal ? (
+                                                            <span className="badge bg-success">✅ {d.statutFinal}</span>
+                                                        ) : isAdministrateur && d.validationAdministration ? (
+                                                            d.validationAdministration.statut === "ACCEPTEE" ? (
+                                                                <span className="badge bg-success">✅ Approuvée</span>
+                                                            ) : d.validationAdministration.statut === "REFUSEE" ? (
+                                                                <span className="badge bg-danger">❌ Refusée</span>
+                                                            ) : (
+                                                                <span className="badge bg-primary">En cours</span>
+                                                            )
                                                         ) : d.statut === "EN_COURS" ? (
                                                             <span className="badge bg-primary">En cours</span>
                                                         ) : (
@@ -499,8 +647,10 @@ const Validation = () => {
                                                         >
                                                             📋 Voir
                                                         </button>
+                                                        
 
-                                                        {!isSupportIT && d.statut === "EN_COURS" && !d.dejaValidee && n1Decision[d.id_demande] !== 'ACCEPTEE' && n1Decision[d.id_demande] !== 'REFUSEE' && (
+
+                                                        {((!isSupportIT && !isSI && !isAdministrateur && d.statut === "EN_COURS" && !d.dejaValidee) || (isSI && d.statut === "EN_COURS" && (!d.validationSI || d.validationSI.statut !== "ACCEPTEE")) || (isManagerN1 && d.statut === "EN_COURS" && !d.dejaValidee)) && (
                                                             <>
                                                                 <button
                                                                     className="btn btn-success btn-sm"
@@ -518,7 +668,7 @@ const Validation = () => {
                                                                 </button>
                                                             </>
                                                         )}
-                                                        {isAdministrateur && d.statut === "EN_COURS" && (
+                                                        {isAdministrateur && d.statut === "EN_COURS" && !d.validationAdministration && (
                                                             <>
                                                                 <button
                                                                     className="btn btn-success btn-sm"
@@ -657,7 +807,9 @@ const Validation = () => {
                                     </div>
                                 )}
 
-                                {isSupportIT && !selectedDemande.validationSupportITExiste && (
+
+
+                                {isSupportIT && !selectedDemande.rapportIT && (
                                     <div className="mt-4">
                                         <h6 className="fw-bold">🧩 Rapport technique (Support IT)</h6>
                                         <div className="mb-3">
@@ -672,7 +824,7 @@ const Validation = () => {
                                 )}
 
                                 {/* Afficher le rapport existant s'il existe */}
-                                {isSupportIT && selectedDemande.validationSupportITExiste && (
+                                {((isSupportIT && selectedDemande.rapportIT) || (isSI && selectedDemande.rapportIT) || (isAdministrateur && selectedDemande.rapportIT)) && (
                                     <div className="mt-4">
                                         <h6 className="fw-bold">📋 Rapport technique soumis</h6>
                                         <div className="bg-success bg-opacity-10 p-3 rounded border border-success">
@@ -701,7 +853,7 @@ const Validation = () => {
                             </div>
                             <div className="modal-footer">
                                 <button type="button" className="btn btn-secondary" onClick={handleCloseDetail}>Fermer</button>
-                                {!isSupportIT && selectedDemande.statut === "EN_COURS" && (
+                                {((!isSupportIT && !isSI && selectedDemande.statut === "EN_COURS") || (isSI && selectedDemande.statut === "ACCEPTEE" && !selectedDemande.validationSI) || (isManagerN1 && selectedDemande.statut === "EN_COURS" && !selectedDemande.dejaValidee)) && (
                                     <>
                                         <button
                                             type="button"
@@ -725,12 +877,12 @@ const Validation = () => {
                                         </button>
                                     </>
                                 )}
-                                {isSupportIT && !selectedDemande.validationSupportITExiste && (
+                                {isSupportIT && !selectedDemande.rapportIT && (
                                     <button type="button" className="btn btn-primary" onClick={handleSubmitRapport} disabled={!rapportFile && !rapportComment}>
                                         Soumettre le rapport
                                     </button>
                                 )}
-                                {isSupportIT && selectedDemande.validationSupportITExiste && (
+                                {isSupportIT && selectedDemande.rapportIT && (
                                     <span className="text-muted">
                                         📋 Rapport déjà soumis
                                     </span>
